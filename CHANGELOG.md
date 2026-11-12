@@ -2,7 +2,9 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 0.1.0-beta.2
+
+Upgrading from 0.1.0-beta.1: replace the jar and every JSP as in [INSTALL.md](INSTALL.md), and add the new `passkey_upgrade.jsp` (with the Advanced File Configurator, as a file of its own). Nothing else changes: both new features stay off until you configure them, and stored passkeys aren't touched.
 
 - Optional automatic passkey upgrade (`MODE=UPGRADE`): after a user signs in with a password their browser's password manager filled in, the browser may create a passkey by itself, with no prompt (WebAuthn conditional create). Only for users with no passkey yet. It never stops the password sign-in. New page `passkey_upgrade.jsp`.
 - Optional password manager sync (`SIGNAL_PASSWORD_MANAGERS=true`): through the WebAuthn Signals API, the manage page tells the user's password manager which passkeys they still have and which one they just removed, and the passkey-only page tells it to forget a passkey this site no longer has. Only what the class is sure of is sent.
