@@ -155,12 +155,27 @@ A contract of Name/Password followed by a method with `MODE=MFA` asks for a pass
 
 ![Password + passkey sign-in](docs/diagrams/mfa_sign_in.svg)
 
+<img src="docs/images/create-passkey.png" alt="Creating a passkey: an optional name, and a Create a passkey button" width="600">
+
+Creating a passkey. The name is optional; without one, the passkey is named after its provider, when it's known, and the date.
+
 ## Signing in with only a passkey
 
 Create a Method on the class with the property `MODE=LOGIN` and **Identifies User** turned on, and a Contract with that Method on its own. Its page does both styles, which `ALLOW_USERNAMELESS` and `ALLOW_IDENTIFIER_FIRST` turn off individually:
 
 - **Passkey alone:** browsers that support it offer passkeys in the ID field's autofill, and **Sign in with a passkey** opens the browser's dialog.
 - **User ID + passkey:** typing an ID and choosing **Continue** asks for that user's passkeys only.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/passkey-sign-in.png" alt="The passkey-only sign-in page: a User ID field, Continue, Sign in with a passkey, and Use another way to sign in"></td>
+<td width="50%"><img src="docs/images/passkey-sign-in-with-id.png" alt="Signing in as a user, waiting for their passkey"></td>
+</tr>
+<tr>
+<td>The sign-in page. Passkeys can also be picked from the User ID field's autofill</td>
+<td>After <b>Continue</b>, while the browser asks for that user's passkey</td>
+</tr>
+</table>
 
 ![Passkey-only sign-in](docs/diagrams/passkey_only_sign_in.svg)
 
@@ -239,6 +254,17 @@ For a worked example, see [YubiKey-only passkeys, moving from certificate sign-i
 
 Create a Method on the class with the property `MODE=MANAGE`, and a Contract of Name/Password followed by that Method. Users reach the page by signing in through that contract; link to it from a portal or bookmark.
 
+<table>
+<tr>
+<td width="50%"><img src="docs/images/passkey-confirm.png" alt="Confirm it is you with a passkey to manage your passkeys"></td>
+<td width="50%"><img src="docs/images/manage.png" alt="The manage page: a list of passkeys with Rename and Remove, recovery codes left, Add a passkey and Done"></td>
+</tr>
+<tr>
+<td>First, the user proves one of their passkeys</td>
+<td>Then they can rename, remove and add passkeys, and replace their recovery codes</td>
+</tr>
+</table>
+
 A user who has passkeys must prove one, with user verification, before the page shows anything, and again after `MANAGE_MAX_AUTH_AGE_SEC`. A passkey used in another contract doesn't count, even moments earlier in the same browser. A rename, remove, add or Done stopped by that finishes once they confirm. A password alone never adds or removes a passkey on an account that has one. A user with no passkeys can enroll from the page if `ENROLL_IF_NONE` is on, after any [first-passkey checks](#the-first-passkey). Finishing the method doesn't require a passkey for that user, so don't give this contract a higher authentication level than its earlier methods. Removing the last passkey returns the account to that no-passkey state; set `REQUIRE_ONE=true` to prevent it.
 
 ## Keeping password managers in sync
@@ -264,6 +290,17 @@ If a user loses every passkey, a contract of Name/Password followed by a Method 
 
 ![Account recovery](docs/diagrams/account_recovery.svg)
 
+<table>
+<tr>
+<td width="50%"><img src="docs/images/recovery.png" alt="The recovery page: enter a recovery code or the code from the helpdesk"></td>
+<td width="50%"><img src="docs/images/recovery-codes.png" alt="A list of ten recovery codes, with Copy codes and I've saved them buttons"></td>
+</tr>
+<tr>
+<td>Recovering with a code, after the password</td>
+<td>New recovery codes, shown once (these are made up)</td>
+</tr>
+</table>
+
 Users get recovery codes with their first passkey, if `RECOVERY_PEPPER` is set, and can replace them from the manage page. Codes are shown once.
 
 After a recovery, the manage page asks the user to check their passkeys and marks the ones added during recovery. Recovery codes or a helpdesk token could reach the wrong person, so `RECOVERY_COOLDOWN_SEC` (for example `86400`) holds back new recovery codes for that long after each recovery. Someone who recovered the account first can't then lock its owner out with codes of their own, and the owner has time to see the email and use their own code or the helpdesk. Removing passkeys stays allowed, so a genuine user can clear out the ones they lost. The recovery time is stored with the codes, as `rr1:` and the time in milliseconds, so deleting the passkey made during recovery doesn't end the cool-down.
@@ -283,6 +320,10 @@ Anyone who can read NAM's configuration can read this value, so keep the configu
 A helpdesk agent can issue a single-use token that lets a user recover their account, or pass the `helpdesk` first-passkey check. Create a Method with `MODE=HELPDESK` and `HELPDESK_GROUP_DN`, and a Contract with Name/Password before it.
 
 ![Helpdesk token](docs/diagrams/helpdesk_token.svg)
+
+<img src="docs/images/helpdesk.png" alt="Issue a helpdesk code: the caller's user ID and three checks the agent must confirm" width="600">
+
+The agent enters the caller's user ID and confirms each check before a code is issued.
 
 An agent must be in the group, checked on every request, or be named in `HELPDESK_ALLOWED_DNS`, and must prove their own passkey. They must confirm every identity check on the page before a token is issued, and they can't issue one for themselves. A token lasts `ENROLL_TOKEN_TTL_SEC` and is shown once. Every issue is logged with the agent's and user's names, and the user is emailed if `NOTIFY_EMAIL` is on.
 

@@ -2,6 +2,10 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+- Docs: screenshots of the sign-in, manage, recovery and helpdesk pages, taken by `npm run screenshots` in `e2e/`
+
 ## 0.1.0-beta.3
 
 Upgrading from 0.1.0-beta.2: replace the jar and every JSP as in [INSTALL.md](INSTALL.md); only `passkey_manage.jsp` changed, and there are no new pages. Nothing needs configuring. Two changes in behaviour to know about: a contract that runs two passkey methods one after the other now asks for the passkey in each, and every identifier-first decoy changes once.

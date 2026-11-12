@@ -131,6 +131,16 @@ Each software passkey's private key is kept in `e2e/.state/`, so later runs sign
 
 If NAM's pooled user-store connections time out while idle, the first search after a quiet spell can fail and the stock password page says "Login failed". The test driver retries the password page once and notes it in the report.
 
+## Screenshots
+
+The screenshots in [docs/images](images) are taken from a test Identity Server with the browser tests' accounts and settings:
+
+```bash
+cd e2e && npm run screenshots
+```
+
+It uses its own Playwright configuration, so `npm test` never takes screenshots. Pages that ask for a passkey as soon as they load are captured while the request waits, as if the user's device were showing its prompt. Recovery codes are replaced with made-up ones before anything is captured, and each contract's card gets a plain title in place of the test server's contract ID. Nothing else is recorded.
+
 ## Diagrams
 
 The sequence diagrams in [docs/diagrams](diagrams) are drawn from one source file, `docs/diagrams/passkey-flows.flow`, with FlowDiagram. After changing it, render the SVGs again:
