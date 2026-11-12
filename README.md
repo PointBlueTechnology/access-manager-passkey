@@ -44,11 +44,15 @@ A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 
 ## Requirements
 
 - OpenText Access Manager 5.1.3 / 26.2 Identity Server, reached over HTTPS on a DNS name (WebAuthn doesn't work on an IP address or over plain HTTP)
-- Java 11 or newer on the Identity Server; passkeys that use Ed25519 need Java 15 or newer
+- No Java to install: the class runs on the Java runtime that ships with the Identity Server (Java 11 on Access Manager 5.1.3)
 - An eDirectory user store. The class has Active Directory code paths, but they're untested
 - A browser with WebAuthn: current Chrome, Edge, Safari or Firefox. Passkeys in the ID field's autofill need a browser that offers them there (Chrome, Edge and Safari do). The [automatic upgrade](#automatic-passkey-upgrade) needs a browser whose password manager can create passkeys by itself; others skip it
 - For `ENROLL_GATES=email` and notification emails: NAM's email configuration
 - The pages are in English only; messages live in one properties file, ready for translations
+
+### Limitations
+
+- **No Ed25519 passkeys on Java 11.** Access Manager runs on the Java runtime OpenText ships with it, which you can't replace. Java 11, which Access Manager 5.1.3 ships, can't verify Ed25519 (EdDSA) signatures, so the class doesn't offer that algorithm when a passkey is created. Authenticators use ES256 or RS256 instead, which common passkey providers and security keys support, so most users won't notice. An authenticator that supports only Ed25519 can't register. If a later Access Manager release ships Java 15 or newer, the class offers Ed25519 by itself, with no setting to change.
 
 ## Status
 
