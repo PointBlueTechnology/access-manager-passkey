@@ -6,7 +6,7 @@
 
     <groupId>com.pointbluetech.nam</groupId>
     <artifactId>nam-passkey-auth</artifactId>
-    <version>0.1.0-beta.2</version>
+    <version>0.1.0-beta.3</version>
     <packaging>jar</packaging>
 
     <name>NAM Passkey Authentication</name>
