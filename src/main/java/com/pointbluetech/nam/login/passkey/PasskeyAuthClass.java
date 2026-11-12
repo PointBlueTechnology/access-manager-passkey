@@ -566,6 +566,10 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                 return showManage(service, state, "manage.removed", credential);
             }
             if (ACTION_CODES.equals(action)) {
+                if (!config.recoveryCodes()) {
+                    logWarning("Refused new recovery codes for " + principal.getUserIdentifier() + ": RECOVERY_CODES is off");
+                    return showManage(service, state, "error.codesOff");
+                }
                 Optional<RecoveryStore> recovery = recoveryFor(principal);
                 if (!recovery.isPresent()) {
                     return showManage(service, state, "error.recoveryUnavailable");
@@ -617,7 +621,8 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
         page.addAttribute("pk_single_warning",
                 Boolean.valueOf(passkeys.size() == 1 && !passkeys.get(0).backupEligible()));
         boolean review = state.recoveryEnrolled();
-        Optional<RecoveryStore> recovery = recoveryFor(principalFromPreviousMethod());
+        Optional<RecoveryStore> recovery = config.recoveryCodes()
+                ? recoveryFor(principalFromPreviousMethod()) : Optional.empty();
         if (recovery.isPresent()) {
             page.addAttribute("pk_codes_left", Integer.toString(recovery.get().codesLeft()));
             Optional<Instant> blocked = recovery.get().codesBlockedUntil(config.recoveryCooldownSec());
@@ -681,7 +686,10 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
             if (!ACTION_RECOVER.equals(action)) {
                 return showRecovery(state, null);
             }
-            RecoveryStore.Match match = recovery.get().consume(m_Request.getParameter(PARAM_CODE));
+            String code = m_Request.getParameter(PARAM_CODE);
+            // With RECOVERY_CODES off, codes stored earlier don't work either: only a helpdesk token does
+            RecoveryStore.Match match = config.recoveryCodes() ? recovery.get().consume(code)
+                    : recovery.get().consumeToken(code) ? RecoveryStore.Match.TOKEN : RecoveryStore.Match.NONE;
             if (match == RecoveryStore.Match.NONE) {
                 int failures = state.addFailure();
                 logWarning("Wrong recovery code for " + user + " (" + failures + " of " + config.maxFailed() + ")");
@@ -1025,7 +1033,10 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
             return showFramePage(state, messageKey);
         }
         String message = messageKey != null ? messageKey : state.takePendingMessage().orElse(null);
-        page(config.recoveryJsp(), message);
+        PageToShow page = page(config.recoveryJsp(), message);
+        if (!config.recoveryCodes()) {
+            page.addAttribute("pk_tokens_only", Boolean.TRUE);
+        }
         return SHOW_JSP;
     }
 
@@ -1146,7 +1157,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
 
     /** Codes for a user's first passkey, if they have none yet and the page can show them right now. */
     private Optional<List<String>> firstRecoveryCodes(NIDPPrincipal principal) {
-        if (isFramePageNeeded()) {
+        if (isFramePageNeeded() || !config.recoveryCodes()) {
             return Optional.empty();
         }
         return recoveryFor(principal)

@@ -4,6 +4,7 @@ All notable changes to this project are listed here. Versions follow [Semantic V
 
 ## Unreleased
 
+- `RECOVERY_CODES=false` turns recovery codes off: none are offered after the first passkey or on the manage page, any issued before are refused, and the recovery page asks only for a helpdesk code. Helpdesk tokens keep working.
 - Docs: screenshots of the sign-in, manage, recovery and helpdesk pages, taken by `npm run screenshots` in `e2e/`
 
 ## 0.1.0-beta.3

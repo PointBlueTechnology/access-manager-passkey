@@ -90,6 +90,20 @@ class PasskeyConfigTest {
     }
 
     @Test
+    void recoveryCodesAreOnUnlessTurnedOff() {
+        assertTrue(PasskeyConfig.from(minimal()).recoveryCodes());
+        assertFalse(PasskeyConfig.from(minimal()).describe().contains("recoveryCodes"));
+
+        Properties props = minimal();
+        props.setProperty("RECOVERY_CODES", "false");
+        props.setProperty("RECOVERY_PEPPER", "0123456789abcdef0123456789abcdef");
+        PasskeyConfig off = PasskeyConfig.from(props);
+        assertFalse(off.recoveryCodes());
+        assertTrue(off.recoveryPepper().isPresent(), "helpdesk tokens keep working");
+        assertTrue(off.describe().contains("recoveryCodes=false"));
+    }
+
+    @Test
     void recoveryCooldownIsOffUnlessSetAndHasALimit() {
         assertEquals(0, PasskeyConfig.from(minimal()).recoveryCooldownSec());
 

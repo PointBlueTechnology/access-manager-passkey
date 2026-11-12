@@ -97,7 +97,7 @@ The class runs in one of six modes, set with the `MODE` property on each Method.
 
 Each mode except `LOGIN` acts on the user an earlier method signed in, so it needs Name/Password, or another method that identifies the user, before it in the contract.
 
-Properties set on the Class apply to every method, and a Method's own value overrides the Class's. Set these on the Class, so every method agrees and passkeys saved by one are found by the others: `RP_ID`, `ORIGINS`, `RP_NAME`, `PASSKEY_LDAP_ATTRIBUTE`, `PASSKEY_RECOVERY_ATTRIBUTE`, `PASSKEY_ENROLL_TOKEN_ATTRIBUTE`, `PASSKEY_AUX_CLASS`, `RECOVERY_PEPPER`, `RECOVERY_COOLDOWN_SEC`, `ALLOWED_AAGUIDS`, `ATTESTATION_TRUST_ROOTS`, `NOTIFY_EMAIL`, `NOTIFY_MAIL_ATTRIBUTE` and `SIGNAL_PASSWORD_MANAGERS`. Set `MODE` and the mode's own options on each Method.
+Properties set on the Class apply to every method, and a Method's own value overrides the Class's. Set these on the Class, so every method agrees and passkeys saved by one are found by the others: `RP_ID`, `ORIGINS`, `RP_NAME`, `PASSKEY_LDAP_ATTRIBUTE`, `PASSKEY_RECOVERY_ATTRIBUTE`, `PASSKEY_ENROLL_TOKEN_ATTRIBUTE`, `PASSKEY_AUX_CLASS`, `RECOVERY_PEPPER`, `RECOVERY_CODES`, `RECOVERY_COOLDOWN_SEC`, `ALLOWED_AAGUIDS`, `ATTESTATION_TRUST_ROOTS`, `NOTIFY_EMAIL`, `NOTIFY_MAIL_ATTRIBUTE` and `SIGNAL_PASSWORD_MANAGERS`. Set `MODE` and the mode's own options on each Method.
 
 ## Configuration
 
@@ -131,6 +131,7 @@ Properties set on the Class apply to every method, and a Method's own value over
 | `RECOVERY_PEPPER` | none | Set on the Class. Required for `RECOVERY` and `HELPDESK`, and enables recovery codes elsewhere. Also keeps identifier-first decoys the same on every node, so set it for `LOGIN` too. At least 32 characters; see [Recovery](#recovery) |
 | `PASSKEY_RECOVERY_ATTRIBUTE` / `PASSKEY_ENROLL_TOKEN_ATTRIBUTE` | the passkey attribute | Where hashed codes and tokens are stored |
 | `RECOVERY_CODE_COUNT` | `10` | 1–50 |
+| `RECOVERY_CODES` | `true` | Set on the class. `false` stops offering recovery codes and refuses any already issued, leaving helpdesk tokens as the only way to recover. See [Recovery](#recovery) |
 | `RECOVERY_COOLDOWN_SEC` | `0` | After a recovery, how long new recovery codes are held back (0–2592000). Set on the class; see [Recovery](#recovery) |
 | `MAX_FAILED` | `5` | Wrong codes per login, and wrong entries before a helpdesk token is removed |
 | `HELPDESK_GROUP_DN` | required for `HELPDESK` | Members may issue tokens. Read from `groupMembership`, or `memberOf` on AD |
@@ -302,6 +303,8 @@ If a user loses every passkey, a contract of Name/Password followed by a Method 
 </table>
 
 Users get recovery codes with their first passkey, if `RECOVERY_PEPPER` is set, and can replace them from the manage page. Codes are shown once.
+
+To rely on the helpdesk alone, set `RECOVERY_CODES=false` on the class. Users are then never shown codes, the manage page doesn't mention them, and the recovery page asks only for the code from the helpdesk. Codes issued before are refused too. The pepper is still needed, for helpdesk tokens and the rest.
 
 After a recovery, the manage page asks the user to check their passkeys and marks the ones added during recovery. Recovery codes or a helpdesk token could reach the wrong person, so `RECOVERY_COOLDOWN_SEC` (for example `86400`) holds back new recovery codes for that long after each recovery. Someone who recovered the account first can't then lock its owner out with codes of their own, and the owner has time to see the email and use their own code or the helpdesk. Removing passkeys stays allowed, so a genuine user can clear out the ones they lost. The recovery time is stored with the codes, as `rr1:` and the time in milliseconds, so deleting the passkey made during recovery doesn't end the cool-down.
 

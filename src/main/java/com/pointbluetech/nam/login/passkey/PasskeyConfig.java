@@ -86,6 +86,8 @@ public final class PasskeyConfig {
     public static final String PASSKEY_ENROLL_TOKEN_ATTRIBUTE = "PASSKEY_ENROLL_TOKEN_ATTRIBUTE";
     public static final String RECOVERY_PEPPER = "RECOVERY_PEPPER";
     public static final String RECOVERY_CODE_COUNT = "RECOVERY_CODE_COUNT";
+    /** Whether users get recovery codes; off leaves helpdesk tokens as the only way to recover */
+    public static final String RECOVERY_CODES = "RECOVERY_CODES";
     public static final String MAX_FAILED = "MAX_FAILED";
     public static final String HELPDESK_GROUP_DN = "HELPDESK_GROUP_DN";
     public static final String HELPDESK_ALLOWED_DNS = "HELPDESK_ALLOWED_DNS";
@@ -141,6 +143,7 @@ public final class PasskeyConfig {
     private final String tokenAttribute;
     private final byte[] recoveryPepper;
     private final int recoveryCodeCount;
+    private final boolean recoveryCodes;
     private final int maxFailed;
     private final String helpdeskGroupDn;
     private final List<String> helpdeskAllowedDns;
@@ -212,6 +215,7 @@ public final class PasskeyConfig {
         String pepper = p.string(RECOVERY_PEPPER, "");
         recoveryPepper = pepper.getBytes(StandardCharsets.UTF_8);
         recoveryCodeCount = (int) p.integer(RECOVERY_CODE_COUNT, 10, 1, 50);
+        recoveryCodes = p.bool(RECOVERY_CODES, true);
         maxFailed = (int) p.integer(MAX_FAILED, 5, 1, 100);
         helpdeskGroupDn = p.string(HELPDESK_GROUP_DN, "");
         // Semicolons, because the DNs themselves contain commas
@@ -431,6 +435,8 @@ public final class PasskeyConfig {
     public long recoveryCooldownSec() { return recoveryCooldownSec; }
     public boolean notifyEmail() { return notifyEmail; }
     public String notifyMailAttribute() { return notifyMailAttribute; }
+    /** Recovery codes are offered and accepted; false leaves helpdesk tokens only. */
+    public boolean recoveryCodes() { return recoveryCodes; }
     public boolean signalPasswordManagers() { return signalPasswordManagers; }
     public AccountCheck accountCheck() { return accountCheck; }
     public int manageMaxAuthAgeSec() { return manageMaxAuthAgeSec; }
@@ -458,6 +464,7 @@ public final class PasskeyConfig {
                 + ", recoveryCooldownSec=" + recoveryCooldownSec
                 + ", notifyEmail=" + notifyEmail
                 + (signalPasswordManagers ? ", signalPasswordManagers=true" : "")
+                + (recoveryCodes ? "" : ", recoveryCodes=false")
                 + (mode == Mode.LOGIN && accountCheck != AccountCheck.ATTRIBUTES
                         ? ", accountCheck=" + accountCheck.name().toLowerCase(Locale.ROOT).replace('_', '-') : "");
     }

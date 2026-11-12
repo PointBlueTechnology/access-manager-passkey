@@ -1,5 +1,9 @@
 <%@ page language="java" pageEncoding="UTF-8" contentType="text/html; charset=UTF-8" %>
 <%@ include file="passkey_common.jspf" %>
+<%
+    // RECOVERY_CODES=false: only a helpdesk code recovers the account
+    boolean pkTokensOnly = request.getAttribute("pk_tokens_only") != null;
+%>
 <form action="<%=pkFormUrl%>" method="post" id="pk_form" autocomplete="off">
     <input type="hidden" name="option" value="credential">
     <input type="hidden" name="pk_action" value="recover">
@@ -8,11 +12,11 @@
     <% } %>
 
     <div class="content login-page" style="margin: 25px; display: block">
-        <div class="signin-div description" style="white-space: normal; max-width: 480px;"><%=pkHtml(PasskeyMessages.get(pkLocale, "recovery.intro"))%></div>
+        <div class="signin-div description" style="white-space: normal; max-width: 480px;"><%=pkHtml(PasskeyMessages.get(pkLocale, pkTokensOnly ? "recovery.introHelpdesk" : "recovery.intro"))%></div>
         <div class="signin-div">
             <div class="input-signin-code">
                 <input type="text" id="pk_code" name="pk_code" autocomplete="off" autocapitalize="characters" spellcheck="false"
-                       placeholder="<%=pkHtml(PasskeyMessages.get(pkLocale, "recovery.placeholder"))%>">
+                       placeholder="<%=pkHtml(PasskeyMessages.get(pkLocale, pkTokensOnly ? "recovery.placeholderHelpdesk" : "recovery.placeholder"))%>">
             </div>
         </div>
         <div id="pk_msg" class="signin-div" role="alert" style="white-space: normal; <%=pkMessage == null ? "display: none" : ""%>"><%=pkHtml(pkMessage)%></div>
