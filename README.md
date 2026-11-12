@@ -4,6 +4,8 @@ A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 
 
 > **Not an OpenText product.** This is an independent project by PointBlue Technology. It isn't made, endorsed or supported by OpenText, so please don't contact OpenText support about it; use this repository's [issues](https://github.com/PointBlueTechnology/access-manager-passkey/issues) instead. It's built on Access Manager's supported extension points: the custom authentication class API and SDK that OpenText provides for adding sign-in methods to the Identity Server.
 
+> **Implementation and support services** for this project are available from [Idenhaus Consulting](https://idenhaus.com).
+
 > **Beta.** This is a pre-release. It has been tested on Access Manager 5.1.3 with eDirectory, but not yet in every setup: see [Status](#status). Try it in a test environment first, and please [report problems](https://github.com/PointBlueTechnology/access-manager-passkey/issues) or [security issues](SECURITY.md).
 
 - **Sign-in:** password + passkey, user ID + passkey, and passkey alone, including from the browser's autofill
