@@ -34,11 +34,15 @@ class PasskeyLoginTest {
     private final Properties props = PasskeyConfigTest.minimal();
     private int directorySearches;
     private boolean searchesFail;
+    private boolean guidSearchesFail;
 
     private final UserDirectory directory = new UserDirectory() {
         @Override
         public Optional<User> byGuid(String guid) {
             directorySearches++;
+            if (guidSearchesFail) {
+                throw new PasskeyStoreException("directory down");
+            }
             return Optional.ofNullable(usersByGuid.get(guid));
         }
 
@@ -226,6 +230,80 @@ class PasskeyLoginTest {
 
         // No decoy: the caller must be told the lookup failed
         assertThrows(PasskeyStoreException.class, () -> login().startForId("alice"));
+    }
+
+    @Test
+    void aRemovedPasskeyIsReportedAsUnregistered() throws Exception {
+        VirtualAuthenticator[] keys = enrollTwo("carol", "dddddddddddddddddddddddddddddddd", 3, 4);
+        removePasskey("dddddddddddddddddddddddddddddddd", keys[0]);
+        String response = keys[0].get(login().startUsernameless());
+
+        assertFails(response);
+        assertEquals(Optional.of(keys[0].id().getBase64Url()), login().unregisteredCredential(response));
+    }
+
+    @Test
+    void aRegisteredPasskeyIsNeverReportedEvenWhenItsSignInFails() throws Exception {
+        alice.userVerified = false;
+        String response = alice.get(login().startUsernameless());
+
+        assertFails(response);
+        assertEquals(Optional.empty(), login().unregisteredCredential(response));
+    }
+
+    @Test
+    void nothingIsReportedForAUserWithNoPasskeysLeft() throws Exception {
+        // As when every passkey was removed, or the method reads the wrong attribute
+        removePasskey("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", alice);
+        String response = alice.get(login().startUsernameless());
+
+        assertFails(response);
+        assertEquals(Optional.empty(), login().unregisteredCredential(response));
+    }
+
+    @Test
+    void nothingIsReportedForAnUnknownOrMissingUserHandle() throws Exception {
+        String options = login().startUsernameless();
+        alice.userHandle = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".getBytes(StandardCharsets.UTF_8);
+        assertEquals(Optional.empty(), login().unregisteredCredential(alice.get(options)));
+
+        alice.userHandle = null;
+        assertEquals(Optional.empty(), login().unregisteredCredential(alice.get(options)));
+    }
+
+    @Test
+    void nothingIsReportedWhenTheDirectoryCannotBeRead() throws Exception {
+        VirtualAuthenticator[] keys = enrollTwo("carol", "dddddddddddddddddddddddddddddddd", 3, 4);
+        removePasskey("dddddddddddddddddddddddddddddddd", keys[0]);
+        String response = keys[0].get(login().startUsernameless());
+        guidSearchesFail = true;
+
+        assertEquals(Optional.empty(), login().unregisteredCredential(response));
+        assertEquals(Optional.empty(), login().unregisteredCredential("not json"));
+    }
+
+    /** Two passkeys for one user, both registered in the same first-passkey login. */
+    private VirtualAuthenticator[] enrollTwo(String name, String guid, long firstSeed, long secondSeed)
+            throws Exception {
+        props.setProperty("MODE", "MFA");
+        UserDirectory.User user = addUser(name, guid);
+        CeremonyState state = new CeremonyState(sessionMap(), "enroll", guid, 300, clock);
+        PasskeyService service = new PasskeyService(PasskeyConfig.from(props), user.account(), user.store(), state, clock);
+        VirtualAuthenticator first = new VirtualAuthenticator(ORIGIN, "example.com", firstSeed);
+        VirtualAuthenticator second = new VirtualAuthenticator(ORIGIN, "example.com", secondSeed);
+        service.finishRegistration(first.create(service.startRegistration()), "First");
+        service.finishRegistration(second.create(service.startRegistration()), "Second");
+        props.setProperty("MODE", "LOGIN");
+        session.clear();
+        return new VirtualAuthenticator[] {first, second};
+    }
+
+    private void removePasskey(String guid, VirtualAuthenticator authenticator) {
+        usersByGuid.get(guid).store().update(records -> {
+            java.util.List<PasskeyRecord> kept = new java.util.ArrayList<>(records);
+            kept.removeIf(record -> record.credentialId().equals(authenticator.id()));
+            return kept;
+        });
     }
 
     private void assertFails(String response) {

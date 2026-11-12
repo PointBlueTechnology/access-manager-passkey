@@ -94,6 +94,8 @@ public final class PasskeyConfig {
     public static final String QUESTIONS_NMAS_TIMEOUT_SEC = "QUESTIONS_NMAS_TIMEOUT_SEC";
     public static final String NOTIFY_EMAIL = "NOTIFY_EMAIL";
     public static final String NOTIFY_MAIL_ATTRIBUTE = "NOTIFY_MAIL_ATTRIBUTE";
+    /** Tell users' password managers which passkeys are still registered (WebAuthn Signals API) */
+    public static final String SIGNAL_PASSWORD_MANAGERS = "SIGNAL_PASSWORD_MANAGERS";
 
     private final Mode mode;
     private final String rpId;
@@ -144,6 +146,7 @@ public final class PasskeyConfig {
     private final int questionsNmasTimeoutSec;
     private final boolean notifyEmail;
     private final String notifyMailAttribute;
+    private final boolean signalPasswordManagers;
 
     private PasskeyConfig(Parser p) {
         mode = p.enumValue(MODE, Mode.class, Mode.MFA);
@@ -228,6 +231,7 @@ public final class PasskeyConfig {
         }
         notifyEmail = p.bool(NOTIFY_EMAIL, false);
         notifyMailAttribute = p.string(NOTIFY_MAIL_ATTRIBUTE, "mail");
+        signalPasswordManagers = p.bool(SIGNAL_PASSWORD_MANAGERS, false);
 
         if (mode == Mode.LOGIN) {
             if (!allowUsernameless && !allowIdentifierFirst) {
@@ -416,6 +420,7 @@ public final class PasskeyConfig {
     public long recoveryCooldownSec() { return recoveryCooldownSec; }
     public boolean notifyEmail() { return notifyEmail; }
     public String notifyMailAttribute() { return notifyMailAttribute; }
+    public boolean signalPasswordManagers() { return signalPasswordManagers; }
     public int manageMaxAuthAgeSec() { return manageMaxAuthAgeSec; }
 
     static boolean isIpLiteral(String host) {
@@ -439,7 +444,8 @@ public final class PasskeyConfig {
                 + (allowedAaguids.isEmpty() ? "" : ", allowedAaguids=" + allowedAaguids.size()
                         + ", trustRoots=" + attestationTrustRoots.size())
                 + ", recoveryCooldownSec=" + recoveryCooldownSec
-                + ", notifyEmail=" + notifyEmail;
+                + ", notifyEmail=" + notifyEmail
+                + (signalPasswordManagers ? ", signalPasswordManagers=true" : "");
     }
 
     private static final class Parser {

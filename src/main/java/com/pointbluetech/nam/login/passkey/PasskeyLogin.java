@@ -6,10 +6,15 @@ import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.FinishAssertionOptions;
 import com.yubico.webauthn.RelyingParty;
 import com.yubico.webauthn.StartAssertionOptions;
+import com.yubico.webauthn.data.AuthenticatorAssertionResponse;
+import com.yubico.webauthn.data.ByteArray;
+import com.yubico.webauthn.data.ClientAssertionExtensionOutputs;
 import com.yubico.webauthn.data.PublicKeyCredential;
 import com.yubico.webauthn.exception.AssertionFailedException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -107,6 +112,36 @@ final class PasskeyLogin {
         state.markVerified(user.get().account().guid());
         recordUse(user.get(), result);
         return user.get();
+    }
+
+    /**
+     * The passkey a failed response used, if this site definitely doesn't have it, so the page can
+     * ask the user's password manager to forget it. That's only when the response's user handle names
+     * a user found in the directory, whose passkeys were read and include others but not this one.
+     * Anything less certain is empty: an unknown or missing user handle, a user with no passkeys (as
+     * when the method reads the wrong attribute), or a directory that couldn't be read. A passkey
+     * that still works must never be reported.
+     */
+    Optional<String> unregisteredCredential(String responseJson) {
+        try {
+            PublicKeyCredential<AuthenticatorAssertionResponse, ClientAssertionExtensionOutputs> credential =
+                    PublicKeyCredential.parseAssertionResponseJson(responseJson);
+            Optional<ByteArray> handle = credential.getResponse().getUserHandle();
+            if (!handle.isPresent()) {
+                return Optional.empty();
+            }
+            Optional<UserDirectory.User> user =
+                    repository.user(new String(handle.get().getBytes(), StandardCharsets.UTF_8));
+            if (!user.isPresent()) {
+                return Optional.empty();
+            }
+            List<PasskeyRecord> passkeys = user.get().store().load();
+            boolean registered = passkeys.stream().anyMatch(record -> record.credentialId().equals(credential.getId()));
+            return passkeys.isEmpty() || registered ? Optional.empty() : Optional.of(credential.getId().getBase64Url());
+        } catch (IOException | RuntimeException e) {
+            // Including PasskeyStoreException: unsure means saying nothing
+            return Optional.empty();
+        }
     }
 
     /** The signature is already verified, so failing to store the counter doesn't fail the sign-in. */

@@ -32,6 +32,7 @@ WebAuthn itself (challenge generation, attestation and assertion verification, c
 | `AccountRestrictions` | eDirectory account checks for `LOGIN` mode, where no password bind happens |
 | `SsprResponses`, `SsprCrypt` | checking answers stored in SSPR's formats |
 | `NmasChallengeProtocol`, `NmasCheck`, `NmasLogin` | checking answers stored in NMAS, through an NMAS login |
+| `PasswordManagerSignals` | what a page passes to the user's password manager through the WebAuthn Signals API |
 | `Notifier`, `NamMailSender` | notification and setup-code emails through NAM's email client |
 | `logging.*` | routes everything, including the library's SLF4J output, to NAM's log, cleaned |
 
@@ -114,6 +115,7 @@ What each part relies on, and the checks behind it:
 - **Recovery:** codes and tokens are single-use and stored only as HMACs. New codes are held back after a recovery for `RECOVERY_COOLDOWN_SEC`, so someone who recovered an account first can't lock its owner out; with `NOTIFY_EMAIL`, the owner is emailed.
 - **Helpdesk:** agents are checked against the group on every request, must prove their own passkey and confirm each identity check, and can't issue a token for themselves. Every issue is logged.
 - **Authenticator allow-list:** an AAGUID counts only with attestation that chains to a configured vendor root.
+- **Password manager signals** (`SIGNAL_PASSWORD_MANAGERS`): a page passes the list of a user's passkeys only from a fresh, successful read, never an empty one, and only after the user proved a passkey from that list in this sign-in. The passkey-only page reports a passkey as unknown only when its user was found with other passkeys and not this one. Anything uncertain sends nothing, so a working passkey is never dropped.
 - **Pages:** every value a page prints is HTML- or JavaScript-escaped, and the WebAuthn options JSON is escaped for its `<script>` block.
 - **Logging:** no challenge, signature, code, token, answer, email address or the pepper is logged. Every message is cleaned of control characters and markup, so text the browser sent can't forge a log line.
 
@@ -124,6 +126,7 @@ Each point has a unit test, and the browser tests cover the flows end to end. Wh
 - Active Directory user stores: test the existing AD code paths, and add AD schema guidance
 - Translations of the pages and emails
 - End-to-end tests for the helpdesk first-passkey check and the authenticator allow-list
+- Testing password manager sync with Chrome and Google Password Manager, and in other browsers as they add the Signals API
 - Testing the automatic upgrade in Safari and Chrome, including which saved logins browsers match to the passkey's user name
 - Testing on more authenticators: Windows Hello, Android, password managers, hardware security keys, and phone sign-in by QR code
 - Testing on multi-node clusters and containers

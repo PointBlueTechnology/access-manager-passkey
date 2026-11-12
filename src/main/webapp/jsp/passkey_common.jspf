@@ -200,6 +200,36 @@ window.PbtPasskey = (function (previousPage) {
         });
     }
 
+    /**
+     * Passes what the server knows about the user's passkeys to their password manager, through the
+     * WebAuthn Signals API: passkeys it doesn't have, the ones the user still has, and the user's
+     * names. Hints only; browsers without the API skip them, and nothing comes back.
+     */
+    function signal() {
+        var element = document.getElementById("pk_signal");
+        if (!element || !window.PublicKeyCredential) {
+            return;
+        }
+        var data;
+        try {
+            data = JSON.parse(element.textContent);
+        } catch (e) {
+            return;
+        }
+        function send(method, value) {
+            if (value && typeof PublicKeyCredential[method] === "function") {
+                PublicKeyCredential[method](value).catch(function (error) {
+                    console.debug("Passkey " + method + " was not passed on:", error);
+                });
+            }
+        }
+        (data.unknown || []).forEach(function (credential) {
+            send("signalUnknownCredential", credential);
+        });
+        send("signalAllAcceptedCredentials", data.accepted);
+        send("signalCurrentUserDetails", data.user);
+    }
+
     function errorMessage(error) {
         switch (error && error.name) {
             case "NotAllowedError":
@@ -255,6 +285,7 @@ window.PbtPasskey = (function (previousPage) {
         isSupported: isSupported,
         isAutofillAvailable: isAutofillAvailable,
         isConditionalCreateAvailable: isConditionalCreateAvailable,
+        signal: signal,
         onActivate: onActivate,
         errorMessage: errorMessage,
         showMessage: showMessage,
@@ -262,3 +293,7 @@ window.PbtPasskey = (function (previousPage) {
     };
 })(window.PbtPasskey);
 </script>
+<% if (request.getAttribute("pk_signal") != null) { %>
+<script type="application/json" id="pk_signal"><%=request.getAttribute("pk_signal")%></script>
+<script>PbtPasskey.signal();</script>
+<% } %>

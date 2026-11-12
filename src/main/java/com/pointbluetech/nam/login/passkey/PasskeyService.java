@@ -193,6 +193,10 @@ final class PasskeyService {
         return views;
     }
 
+    UserAccount account() {
+        return account;
+    }
+
     /** UPGRADE mode, where the browser's password manager creates the passkey by itself. */
     private boolean upgrading() {
         return config.mode() == PasskeyConfig.Mode.UPGRADE;

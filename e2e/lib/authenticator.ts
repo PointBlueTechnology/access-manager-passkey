@@ -36,13 +36,14 @@ export function savePasskey(accountId: string, credential: StoredCredential): vo
 export class Authenticator {
     private constructor(private readonly cdp: CDPSession, private readonly id: string) {}
 
-    static async attach(page: Page): Promise<Authenticator> {
+    /** Chrome allows one internal authenticator per page; a second one has to be another transport. */
+    static async attach(page: Page, transport: 'internal' | 'usb' = 'internal'): Promise<Authenticator> {
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('WebAuthn.enable', { enableUI: false });
         const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
             options: {
                 protocol: 'ctap2',
-                transport: 'internal',
+                transport,
                 hasResidentKey: true,
                 hasUserVerification: true,
                 isUserVerified: true,
@@ -59,5 +60,24 @@ export class Authenticator {
     async credentials(): Promise<StoredCredential[]> {
         const { credentials } = await this.cdp.send('WebAuthn.getCredentials', { authenticatorId: this.id });
         return credentials;
+    }
+
+    async remove(credentialId: string): Promise<void> {
+        await this.cdp.send('WebAuthn.removeCredential', { authenticatorId: this.id, credentialId });
+    }
+
+    /**
+     * Waits for this authenticator to stop holding a credential, as Chrome does when a page tells it
+     * the site no longer has one (the WebAuthn Signals API). False if it's still there at the deadline.
+     */
+    async waitUntilGone(credentialId: string, timeout = 10_000): Promise<boolean> {
+        const deadline = Date.now() + timeout;
+        while (Date.now() < deadline) {
+            if (!(await this.credentials()).some(c => c.credentialId === credentialId)) {
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        return false;
     }
 }

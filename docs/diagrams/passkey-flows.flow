@@ -265,3 +265,29 @@ sequence approved_authenticator "Registering an approved security key (ALLOWED_A
         pk --> browser: "This kind of passkey isn't allowed here"
     end
     deactivate pk
+
+sequence password_manager_sync "Keeping password managers in sync (SIGNAL_PASSWORD_MANAGERS=true)"
+    participant user "User" { type: actor }
+    participant browser "Browser and\npassword manager"
+    participant pk "Passkey method"
+    participant dir "User store\n(eDirectory)" { type: database }
+
+    group removing a passkey on the manage page (MODE=MANAGE)
+        user -> browser: Remove, on a passkey
+        browser -> +pk: remove it
+        note over pk, dir: allowed only after a passkey proof in this login
+        pk -> dir: remove it from the user's passkeys
+        pk -> dir: read the passkeys left
+        pk --> -browser: manage page, with signals
+        note over browser, pk: the page calls signalUnknownCredential (the removed passkey),\nsignalAllAcceptedCredentials (the passkeys left)\nand signalCurrentUserDetails (the user's names)
+        note over browser: the password manager drops or hides the removed passkey
+    end
+
+    group a passkey removed elsewhere, still offered (MODE=LOGIN)
+        user -> browser: picks it from autofill
+        browser -> +pk: signed assertion
+        pk -> dir: find the user by the user handle, read their passkeys
+        note over pk, dir: sign-in fails. Signals only if the user was found and has other passkeys, but not this one
+        pk --> -browser: sign-in page with "Sign-in failed",\nand signalUnknownCredential for that passkey
+        note over browser: the password manager stops offering it
+    end

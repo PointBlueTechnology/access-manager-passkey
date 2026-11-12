@@ -271,8 +271,9 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
         logFine("doAuthenticate login action=" + action + ", firstCall=" + isFirstCallAfterPrevMethod());
 
         if (ACTION_ASSERT.equals(action)) {
+            String response = m_Request.getParameter(PARAM_RESPONSE);
             try {
-                NIDPPrincipal principal = (NIDPPrincipal) login.finish(m_Request.getParameter(PARAM_RESPONSE)).principal();
+                NIDPPrincipal principal = (NIDPPrincipal) login.finish(response).principal();
                 if (!mayLogIn(principal)) {
                     return showLogin(login, state, "error.loginFailed");
                 }
@@ -283,7 +284,16 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                 return AUTHENTICATED;
             } catch (CeremonyFailedException e) {
                 logWarning("Passkey sign-in failed: " + e.getMessage());
-                return showLogin(login, state, e.messageKey());
+                int shown = showLogin(login, state, e.messageKey());
+                if (config.signalPasswordManagers() && !isFramePageNeeded()) {
+                    // A passkey removed here can still be offered by the user's password manager
+                    login.unregisteredCredential(response).ifPresent(id -> {
+                        logFine("The passkey used isn't registered here; asking the browser's password manager"
+                                + " to forget it");
+                        addSignals(new PasswordManagerSignals(config.rpId()).unknown(id));
+                    });
+                }
+                return shown;
             }
         }
         if (ACTION_IDENTIFY.equals(action) && config.allowIdentifierFirst() && !isFramePageNeeded()) {
@@ -534,7 +544,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
             if (ACTION_DELETE.equals(action)) {
                 String removed = service.delete(credential);
                 notifyUser(Notification.PASSKEY_REMOVED, principal, removed);
-                return showManage(service, state, "manage.removed");
+                return showManage(service, state, "manage.removed", credential);
             }
             if (ACTION_CODES.equals(action)) {
                 Optional<RecoveryStore> recovery = recoveryFor(principal);
@@ -561,6 +571,11 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
 
     /** The list if this login may see it; otherwise whatever must happen first. */
     private int showManage(PasskeyService service, CeremonyState state, String messageKey) {
+        return showManage(service, state, messageKey, null);
+    }
+
+    /** @param removedCredential the passkey this request just removed, if any */
+    private int showManage(PasskeyService service, CeremonyState state, String messageKey, String removedCredential) {
         if (isFramePageNeeded()) {
             return showFramePage(state, messageKey);
         }
@@ -596,7 +611,34 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
         if (review) {
             page.addAttribute("pk_review", Boolean.TRUE);
         }
+        if (config.signalPasswordManagers()) {
+            addSignals(manageSignals(service, passkeys, removedCredential));
+        }
         return SHOW_JSP;
+    }
+
+    /**
+     * For the user's password manager: the passkeys they still have, but only once a passkey from
+     * this same list was proved in this login, which shows the list was read from the right place;
+     * and the one just removed, which this request knows for certain is gone.
+     */
+    private PasswordManagerSignals manageSignals(PasskeyService service, List<PasskeyRecord> passkeys,
+            String removedCredential) {
+        PasswordManagerSignals signals = new PasswordManagerSignals(config.rpId());
+        if (!passkeys.isEmpty() && service.recentlyVerified()) {
+            signals.accepted(service.account(), passkeys);
+        }
+        if (removedCredential != null) {
+            signals.unknown(removedCredential);
+        }
+        return signals;
+    }
+
+    /** Puts signals on the page being shown, for the shared script to pass to the password manager. */
+    private void addSignals(PasswordManagerSignals signals) {
+        if (!signals.isEmpty() && m_PageToShow != null) {
+            m_PageToShow.addAttribute("pk_signal", (Object) signals.toScriptJson());
+        }
     }
 
     /**

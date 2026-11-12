@@ -10,6 +10,7 @@ A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 
 
 - **Sign-in:** password + passkey, user ID + passkey, and passkey alone, including from the browser's autofill
 - **Self-service:** users list, rename, remove and add passkeys
+- **Password manager sync:** optionally, removed passkeys stop being offered by users' password managers
 - **Automatic upgrade:** optionally, the browser's password manager creates a passkey by itself after a saved password signs the user in
 - **First passkey:** optional checks before a user's first passkey: an emailed code, a helpdesk code, or their SSPR or NMAS security questions
 - **Recovery:** single-use recovery codes and helpdesk-issued tokens, with an optional cool-down after each recovery
@@ -30,6 +31,7 @@ A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 
 - [Automatic passkey upgrade](#automatic-passkey-upgrade)
 - [Approved authenticators only](#approved-authenticators-only)
 - [Managing passkeys](#managing-passkeys)
+- [Keeping password managers in sync](#keeping-password-managers-in-sync)
 - [Recovery](#recovery)
 - [Helpdesk tokens](#helpdesk-tokens)
 - [Notification emails](#notification-emails)
@@ -55,9 +57,9 @@ This is a beta. What has been tested, and what hasn't yet:
 | Area | Tested |
 |---|---|
 | Unit tests | Every ceremony against a software authenticator, configuration, recovery codes and tokens, emails, SSPR answer formats, the NMAS exchange against a fake server, log cleaning |
-| Browser tests on Access Manager 5.1.3 + eDirectory | Passkey-only sign-in by button and autofill, refusing a disabled account, the fallback link, the emailed first-passkey code, SSPR security questions, recovery codes, helpdesk tokens, `MAX_FAILED`, nothing secret in the log ([details](docs/BUILDING.md#browser-tests)) |
+| Browser tests on Access Manager 5.1.3 + eDirectory | Passkey-only sign-in by button and autofill, refusing a disabled account, the fallback link, password manager sync (with Chrome's virtual authenticator), the emailed first-passkey code, SSPR security questions, recovery codes, helpdesk tokens, `MAX_FAILED`, nothing secret in the log ([details](docs/BUILDING.md#browser-tests)) |
 | By hand | Touch ID with Safari and Chrome on macOS, including autofill |
-| **Not yet** | Active Directory user stores; NMAS security questions against a live directory; the helpdesk first-passkey check, the authenticator allow-list and the automatic upgrade end to end (unit-tested only); Windows Hello, Android, password managers, hardware security keys and phone sign-in by QR code; multi-node clusters and containers; translations |
+| **Not yet** | Active Directory user stores; NMAS security questions against a live directory; the helpdesk first-passkey check, the authenticator allow-list, and the automatic upgrade end to end (unit-tested only); password manager sync with real password managers; Windows Hello, Android, password managers, hardware security keys and phone sign-in by QR code; multi-node clusters and containers; translations |
 
 ## Installing
 
@@ -89,7 +91,7 @@ The class runs in one of six modes, set with the `MODE` property on each Method.
 
 Each mode except `LOGIN` acts on the user an earlier method signed in, so it needs Name/Password, or another method that identifies the user, before it in the contract.
 
-Properties set on the Class apply to every method, and a Method's own value overrides the Class's. Set these on the Class, so every method agrees and passkeys saved by one are found by the others: `RP_ID`, `ORIGINS`, `RP_NAME`, `PASSKEY_LDAP_ATTRIBUTE`, `PASSKEY_RECOVERY_ATTRIBUTE`, `PASSKEY_ENROLL_TOKEN_ATTRIBUTE`, `PASSKEY_AUX_CLASS`, `RECOVERY_PEPPER`, `RECOVERY_COOLDOWN_SEC`, `ALLOWED_AAGUIDS`, `ATTESTATION_TRUST_ROOTS`, `NOTIFY_EMAIL` and `NOTIFY_MAIL_ATTRIBUTE`. Set `MODE` and the mode's own options on each Method.
+Properties set on the Class apply to every method, and a Method's own value overrides the Class's. Set these on the Class, so every method agrees and passkeys saved by one are found by the others: `RP_ID`, `ORIGINS`, `RP_NAME`, `PASSKEY_LDAP_ATTRIBUTE`, `PASSKEY_RECOVERY_ATTRIBUTE`, `PASSKEY_ENROLL_TOKEN_ATTRIBUTE`, `PASSKEY_AUX_CLASS`, `RECOVERY_PEPPER`, `RECOVERY_COOLDOWN_SEC`, `ALLOWED_AAGUIDS`, `ATTESTATION_TRUST_ROOTS`, `NOTIFY_EMAIL`, `NOTIFY_MAIL_ATTRIBUTE` and `SIGNAL_PASSWORD_MANAGERS`. Set `MODE` and the mode's own options on each Method.
 
 ## Configuration
 
@@ -132,6 +134,7 @@ Properties set on the Class apply to every method, and a Method's own value over
 | `MANAGE_MAX_AUTH_AGE_SEC` | `300` | `MANAGE`: how long a passkey proof unlocks the page (30–86400) |
 | `NOTIFY_EMAIL` | `false` | Email users about passkey changes, recoveries and helpdesk codes. Set on the class. See [Notification emails](#notification-emails) |
 | `NOTIFY_MAIL_ATTRIBUTE` | `mail` | The user attribute holding their address |
+| `SIGNAL_PASSWORD_MANAGERS` | `false` | Tell users' password managers which passkeys are still registered, so removed ones stop being offered. Set on the class. See [Keeping password managers in sync](#keeping-password-managers-in-sync) |
 | `LAST_USED_WRITE_INTERVAL` | `86400` | Seconds between "last used" writes when nothing else changed |
 | `JSP_MFA`, `JSP_REGISTER`, `JSP_MANAGE`, `JSP_LOGIN`, `JSP_RECOVERY`, `JSP_CODES`, `JSP_HELPDESK`, `JSP_GATE`, `JSP_UPGRADE` | `passkey_mfa` and so on | Page names, for a site using renamed copies |
 
@@ -222,6 +225,23 @@ For a worked example, see [YubiKey-only passkeys, moving from certificate sign-i
 Create a Method on the class with the property `MODE=MANAGE`, and a Contract of Name/Password followed by that Method. Users reach the page by signing in through that contract; link to it from a portal or bookmark.
 
 A user who has passkeys must prove one, with user verification, before the page shows anything, and again after `MANAGE_MAX_AUTH_AGE_SEC`. A rename, remove, add or Done stopped by that finishes once they confirm. A password alone never adds or removes a passkey on an account that has one. A user with no passkeys can enroll from the page if `ENROLL_IF_NONE` is on, after any [first-passkey checks](#the-first-passkey). Finishing the method doesn't require a passkey for that user, so don't give this contract a higher authentication level than its earlier methods. Removing the last passkey returns the account to that no-passkey state; set `REQUIRE_ONE=true` to prevent it.
+
+## Keeping password managers in sync
+
+When a user removes a passkey on the manage page, their password manager doesn't know, so it keeps offering that passkey, and signing in with it fails. With `SIGNAL_PASSWORD_MANAGERS=true` on the class, the pages tell the password manager what the server knows, through the browser's WebAuthn Signals API. It's off unless you turn it on.
+
+![Keeping password managers in sync](docs/diagrams/password_manager_sync.svg)
+
+- **On the manage page,** once the user has proved a passkey in this sign-in, the page passes on the list of passkeys they still have and their current names. After a removal it also says that the removed passkey is gone. The password manager then hides or removes passkeys that aren't on the list, and updates the names it shows.
+- **On the passkey-only page,** when a sign-in fails with a passkey this site no longer has, the page tells the password manager to stop offering it.
+
+They're hints. The browser passes them on and reports nothing back, and each password manager decides what to do with them. Recent versions of Chrome support them with Google Password Manager, and other browsers and password managers are adding support. A browser without the API skips them, so nothing changes for its users. A passkey stored on a hardware security key stays on the key, because no password manager holds it. Users remove those with the key's own tools.
+
+A wrong list would make password managers drop passkeys that still work, so the class only sends what it's sure of:
+
+- **The list of passkeys:** only from a fresh read of the user's passkeys, never after a read error. The class never sends an empty list, and sends one only in a sign-in where the user just proved a passkey from that same list. A method pointed at the wrong attribute can't send anything, because the user couldn't have proved a passkey from it.
+- **A passkey this site doesn't have, at sign-in:** only when the passkey's user is found, has other passkeys, and this one isn't among them. A user with no passkeys at all, an unknown user, or a directory that can't be read sends nothing.
+- Set it on the class, so that every method agrees.
 
 ## Recovery
 

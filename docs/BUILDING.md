@@ -54,6 +54,7 @@ The unit tests need no server. They run real WebAuthn ceremonies against a softw
 
 - the challenge, replay and sign-counter rules
 - configuration validation, including the options `UPGRADE` mode refuses
+- password manager signals: what each page passes on, never an empty list, and the passkey-only page reporting a passkey as unregistered only when that's certain
 - the automatic upgrade: a registration without user presence or verification is accepted only in `UPGRADE` mode, only for a user with no passkey, and doesn't unlock the manage page
 - recovery codes and helpdesk tokens
 - notification emails
@@ -81,6 +82,7 @@ They cover:
 - recovering with a helpdesk token or a recovery code, each working only once, and creating new codes
 - ending an attempt after `MAX_FAILED` wrong codes
 - that no code, token or test password reaches the log or an email
+- password manager sync: removing a passkey on the manage page makes the browser forget that one and keep the others, and a passkey removed elsewhere is forgotten after it fails to sign in. Chrome deletes credentials from its virtual authenticators when a page signals, so the tests check what the browser did
 
 Touch ID, Safari autofill and the automatic upgrade are tested by hand, because the upgrade needs a real password manager that has just filled in the password.
 
@@ -99,6 +101,7 @@ Each optional test is skipped until its settings are in `.env`:
 - **SSPR security questions:** load `e2e/fixtures/sspr-responses.ldif` onto the same account. It holds SSPR-format test answers made with SSPR's own library; change its DN and attribute if yours differ. Create a contract of Name/Password, then a `MANAGE` method with `ENROLL_GATES=questions` and a matching `QUESTIONS_SSPR_ATTRIBUTE`, and set `E2E_CONTRACT_QUESTIONS`.
 - **NMAS security questions:** give the same account the same four questions and answers in NMAS, through SSPR set to store answers in NMAS or through iManager. Add a second contract whose method also has `QUESTIONS_STORE=nmas`, and set `E2E_CONTRACT_QUESTIONS_NMAS`. The tree needs a `Challenge Response` login sequence, or set `QUESTIONS_NMAS_SEQUENCE` to yours.
 - **Recovery cool-down:** set `RECOVERY_COOLDOWN_SEC` on the class to something short, such as `30`, and `E2E_RECOVERY_COOLDOWN_SEC` to the same value. The tests then wait it out after each recovery.
+- **Password manager sync:** set `SIGNAL_PASSWORD_MANAGERS=true` on the class. The tests use the `E2E_USER_ID` account and skip themselves when the manage page carries no signals.
 - **Notification emails:** set `NOTIFY_EMAIL=true` on the class, `E2E_USER_MAIL` to an address that reaches MailCatcher, and `E2E_MAILCATCHER_URL` if it isn't on `localhost:1080`.
 
 ### Running

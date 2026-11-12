@@ -57,6 +57,18 @@ class PasskeyConfigTest {
     }
 
     @Test
+    void passwordManagerSignalsAreOffUnlessTurnedOn() {
+        assertFalse(PasskeyConfig.from(minimal()).signalPasswordManagers());
+        assertFalse(PasskeyConfig.from(minimal()).describe().contains("signalPasswordManagers"));
+
+        Properties props = minimal();
+        props.setProperty("SIGNAL_PASSWORD_MANAGERS", "true");
+        PasskeyConfig on = PasskeyConfig.from(props);
+        assertTrue(on.signalPasswordManagers());
+        assertTrue(on.describe().contains("signalPasswordManagers=true"));
+    }
+
+    @Test
     void recoveryCooldownIsOffUnlessSetAndHasALimit() {
         assertEquals(0, PasskeyConfig.from(minimal()).recoveryCooldownSec());
 
