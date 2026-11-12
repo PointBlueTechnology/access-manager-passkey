@@ -105,6 +105,7 @@ Touch ID, Safari autofill and the automatic upgrade are tested by hand, because 
 2. Copy `e2e/.env.example` to `e2e/.env`. Set `E2E_BASE_URL` and `E2E_SSH` for your test server, fill in the IDs and passwords, and change the contract IDs if yours differ. These are the IDs on each contract's Authentication Card tab (the `main.jsp?id=` value, not the contract's name or URI). Use passwords long enough that they can't match ordinary log text.
 3. `cd e2e && npm install`. The tests use the installed Google Chrome.
 4. Set up key-based ssh from this machine to the Identity Server, which `scripts/deploy-test.sh` needs too.
+5. The tests read `/opt/novell/nam/idp/logs/catalina.out`, so turn on **Echo to Console** in the Identity Server's logging settings, with the Application logger at Info or more detailed, or set `E2E_LOG` to a log file that has the `[Passkey]` lines.
 
 Each optional test is skipped until its settings are in `.env`:
 

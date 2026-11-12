@@ -193,7 +193,7 @@ Since no password is checked, eDirectory never gets the chance to refuse a bind,
 
 An unknown ID, or one with no passkeys, gets a made-up credential ID, so the page doesn't reveal which accounts exist. The decoy is derived from `RECOVERY_PEPPER`, so it's the same on every node and after a restart; without a pepper the class warns at startup. It takes the length and transports of a common kind of passkey, and a real user's answer takes the same directory work as a decoy's. It can't hide everything: a user with more than one passkey lists that many, so the count can still hint that an ID has passkeys. Where that matters, set `ALLOW_IDENTIFIER_FIRST=false`, which leaves signing in with the passkey alone, where no credential IDs are sent.
 
-There's no password in the session after this contract, so anything that replays the user's password, such as Identity Injection or Form Fill of a password, won't have one.
+No password is entered in this contract, so on its own it leaves none in the session for anything that replays the user's password, such as Identity Injection or Form Fill of a password. To give them one, add NAM's PasswordFetch method as the second method in the contract, after the passkey method, as NAM does for X.509 and Kerberos contracts: it retrieves the user's password from eDirectory and stores it with the session's credentials. Select **Retain Previous Principal** on its class, so the user the passkey signed in stays the principal. It works only with eDirectory user stores, and the Universal Password policy must allow the password to be retrieved. See "Password retrieval" in the Access Manager administration guide.
 
 Known issues:
 
@@ -344,7 +344,7 @@ A sign-in or change never waits for mail. It only adds the message to a queue in
 
 ## Logging
 
-Everything, including the bundled Yubico library's SLF4J output, goes to the Identity Server **Application** logger (`NIDPLog`). Set its level in Administration Console under Identity Servers > Edit > Logging > Component File Logger Levels > Application. Look for lines starting with `[Passkey]` (this class) or `[Passkey:<Class>]` (the library) in the IDP `catalina.out`. Nothing is written to stdout or stderr.
+Everything, including the bundled Yubico library's SLF4J output, goes to the Identity Server **Application** logger (`NIDPLog`). Set its level in Administration Console under Identity Servers > Edit > Logging > Component File Logger Levels > Application. Look for lines starting with `[Passkey]` (this class) or `[Passkey:<Class>]` (the library). They're wherever NAM writes its own log: the Identity Server's log file, `/var/opt/novell/nam/logs/idp/nidplogs/NIDP.<date>.xml` by default, and also `catalina.out` when **Echo to Console** is on in the same logging settings. The class never prints to stdout or stderr itself.
 
 Lines name the user and what happened, never a secret: no challenges, signatures, recovery codes, helpdesk tokens, setup codes, security answers or the pepper, and no email addresses. Some lines include text the browser sent, such as a request parameter or the origin in a passkey response, so every message is cleaned first: line breaks and other control characters show as escapes like `\n`, `<` and `>` become `‹` and `›`, and messages over 4,000 characters are cut. A crafted request can't add a fake line to the log.
 
