@@ -41,6 +41,7 @@ final class VirtualAuthenticator {
     final String rpId;
     byte[] userHandle;
     long counter;
+    boolean userPresent = true;
     boolean userVerified = true;
     boolean synced;
     Boolean reportDiscoverable = true;
@@ -148,7 +149,7 @@ final class VirtualAuthenticator {
     }
 
     private byte[] authDataPrefix(int extraFlags) throws Exception {
-        int flags = FLAG_UP | extraFlags
+        int flags = (userPresent ? FLAG_UP : 0) | extraFlags
                 | (userVerified ? FLAG_UV : 0)
                 | (synced ? FLAG_BE | FLAG_BS : 0);
         ByteArrayOutputStream out = new ByteArrayOutputStream();

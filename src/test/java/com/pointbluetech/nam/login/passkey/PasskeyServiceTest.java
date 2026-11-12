@@ -391,6 +391,66 @@ class PasskeyServiceTest {
     }
 
     @Test
+    void upgradeAcceptsAPasskeyTheBrowserCreatedWithoutAskingTheUser() throws Exception {
+        props.setProperty("MODE", "UPGRADE");
+        VirtualAuthenticator passwordManager = authenticator(1);
+        passwordManager.userPresent = false;
+        passwordManager.userVerified = false;
+
+        String options = service().startRegistration();
+        var selection = new com.fasterxml.jackson.databind.ObjectMapper().readTree(options)
+                .get("publicKey").get("authenticatorSelection");
+        assertEquals("preferred", selection.get("userVerification").asText());
+        assertEquals("required", selection.get("residentKey").asText());
+
+        service().finishRegistration(passwordManager.create(options), null);
+
+        assertEquals(1, service().passkeys().size());
+        // It proves nothing beyond the password, so it opens nothing that needs a passkey
+        props.setProperty("MODE", "MANAGE");
+        assertFalse(service().recentlyVerified());
+    }
+
+    @Test
+    void upgradeIsOnlyForUsersWithNoPasskey() throws Exception {
+        enroll(1);
+        session.clear();
+        props.setProperty("MODE", "UPGRADE");
+
+        assertEquals("error.registerNotAllowed", assertThrows(CeremonyFailedException.class,
+                () -> service().startRegistration()).messageKey());
+    }
+
+    @Test
+    void upgradeCannotFinishOnceAPasskeyHasAppeared() throws Exception {
+        props.setProperty("MODE", "UPGRADE");
+        VirtualAuthenticator passwordManager = authenticator(2);
+        passwordManager.userPresent = false;
+        String options = service().startRegistration();
+
+        props.setProperty("MODE", "MFA");
+        Map<String, Object> otherLogin = new HashMap<>();
+        CeremonyState otherState = new CeremonyState(sessionOf(otherLogin), "card", GUID, 300, clock);
+        VirtualAuthenticator other = authenticator(1);
+        serviceFor(directory, otherState).finishRegistration(
+                other.create(serviceFor(directory, otherState).startRegistration()), "Other");
+
+        props.setProperty("MODE", "UPGRADE");
+        String response = passwordManager.create(options);
+        assertEquals("error.registerNotAllowed", assertThrows(CeremonyFailedException.class,
+                () -> service().finishRegistration(response, null)).messageKey());
+        assertEquals(1, directory.passkeyValues().size());
+    }
+
+    @Test
+    void registrationWithoutUserPresenceIsRejectedOutsideUpgrade() throws Exception {
+        VirtualAuthenticator authenticator = authenticator(1);
+        authenticator.userPresent = false;
+
+        assertVerifyRegistrationFails(authenticator.create(service().startRegistration()));
+    }
+
+    @Test
     void manageRequiresUserVerificationWhenConfirming() throws Exception {
         VirtualAuthenticator authenticator = enroll(1);
         session.clear();

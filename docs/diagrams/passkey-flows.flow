@@ -201,3 +201,39 @@ sequence helpdesk_token "Helpdesk token (MODE=HELPDESK)"
         pk --> idp: authenticated
     end
     deactivate pk
+
+sequence passkey_upgrade "Automatic passkey upgrade (MODE=UPGRADE)"
+    participant user "User" { type: actor }
+    participant browser "Browser and\npassword manager"
+    participant idp "NAM Identity Server"
+    participant pk "Passkey method"
+    participant dir "User store\n(eDirectory)" { type: database }
+
+    user -> browser: opens a protected application
+    browser -> idp: contract: Name/Password, then the UPGRADE method
+    idp --> browser: Name/Password page
+    browser -> user: offers the saved password
+    user -> browser: picks it, signs in
+    browser -> idp: POST credentials
+    idp -> dir: bind as the user
+    dir --> idp: ok
+    idp -> +pk: run the passkey method for this user
+    pk -> dir: read the passkey attribute
+    dir --> pk: stored passkeys
+    alt no passkey yet
+        pk --> browser: "Signing you in..." page with a challenge
+        browser -> browser: can it create one by itself?
+        alt its password manager just filled in this user's password
+            note over browser: creates a passkey without a prompt;\nat most a notice that it was saved
+            browser -> pk: new passkey (no user presence or verification)
+            pk -> dir: store it
+            note over pk: emails "passkey added" if NOTIFY_EMAIL is on
+        else can't, won't, or no answer in 8 seconds
+            browser -> pk: skip, with the reason (logged at fine)
+        end
+    else already has a passkey
+        note over pk: nothing to do
+    end
+    pk --> idp: authenticated (the password alone, whatever happened)
+    deactivate pk
+    idp --> browser: back to the application, signed in

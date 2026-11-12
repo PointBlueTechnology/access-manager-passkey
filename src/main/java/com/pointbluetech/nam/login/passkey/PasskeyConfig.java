@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
  */
 public final class PasskeyConfig {
 
-    public enum Mode { MFA, LOGIN, MANAGE, RECOVERY, HELPDESK }
+    public enum Mode { MFA, LOGIN, MANAGE, RECOVERY, HELPDESK, UPGRADE }
 
     /** Extra checks before a user's first passkey, in the order they're asked for. */
     public enum EnrollGate { EMAIL, HELPDESK, QUESTIONS }
@@ -72,6 +72,7 @@ public final class PasskeyConfig {
     public static final String JSP_GATE = "JSP_GATE";
     public static final String JSP_CODES = "JSP_CODES";
     public static final String JSP_HELPDESK = "JSP_HELPDESK";
+    public static final String JSP_UPGRADE = "JSP_UPGRADE";
     public static final String PASSKEY_ONLY = "PASSKEY_ONLY";
     public static final String RECOVERY_URL = "RECOVERY_URL";
     public static final String PASSKEY_RECOVERY_ATTRIBUTE = "PASSKEY_RECOVERY_ATTRIBUTE";
@@ -122,6 +123,7 @@ public final class PasskeyConfig {
     private final String gateJsp;
     private final String codesJsp;
     private final String helpdeskJsp;
+    private final String upgradeJsp;
     private final boolean passkeyOnly;
     private final String recoveryUrl;
     private final String recoveryAttribute;
@@ -188,6 +190,7 @@ public final class PasskeyConfig {
         gateJsp = p.string(JSP_GATE, "passkey_gate");
         codesJsp = p.string(JSP_CODES, "passkey_codes");
         helpdeskJsp = p.string(JSP_HELPDESK, "passkey_helpdesk");
+        upgradeJsp = p.string(JSP_UPGRADE, "passkey_upgrade");
         passkeyOnly = p.bool(PASSKEY_ONLY, false);
         recoveryUrl = p.string(RECOVERY_URL, "");
         // Sharing the passkey attribute works because every kind of value has its own prefix
@@ -232,6 +235,22 @@ public final class PasskeyConfig {
             }
             if (userVerification != UserVerificationRequirement.REQUIRED) {
                 p.error(USER_VERIFICATION + " must be required in LOGIN mode (the passkey is the only factor)");
+            }
+        }
+        if (mode == Mode.UPGRADE) {
+            // The browser creates the passkey without asking the user anything, so nothing can come first
+            if (!enrollGates.isEmpty()) {
+                p.error(ENROLL_GATES + " can't be used in UPGRADE mode: a passkey the browser creates by itself"
+                        + " can't wait for checks. Use an MFA or MANAGE method for users who must pass checks first");
+            }
+            // Password managers make these passkeys, and they send no attestation to check
+            if (!allowedAaguids.isEmpty()) {
+                p.error(ALLOWED_AAGUIDS + " can't be used in UPGRADE mode: password managers create these passkeys"
+                        + " and send no attestation");
+            }
+            if (authenticatorAttachment == AuthenticatorAttachment.CROSS_PLATFORM) {
+                p.error(AUTHENTICATOR_ATTACHMENT + " can't be cross-platform in UPGRADE mode: the passkey is made"
+                        + " by the browser's password manager");
             }
         }
         if (passkeyAttribute.isEmpty()) {
@@ -341,6 +360,7 @@ public final class PasskeyConfig {
     public String gateJsp() { return gateJsp; }
     public String codesJsp() { return codesJsp; }
     public String helpdeskJsp() { return helpdeskJsp; }
+    public String upgradeJsp() { return upgradeJsp; }
     public boolean passkeyOnly() { return passkeyOnly; }
     public String recoveryUrl() { return recoveryUrl; }
     public String recoveryAttribute() { return recoveryAttribute; }

@@ -10,6 +10,7 @@ A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 
 
 - **Sign-in:** password + passkey, user ID + passkey, and passkey alone, including from the browser's autofill
 - **Self-service:** users list, rename, remove and add passkeys
+- **Automatic upgrade:** optionally, the browser's password manager creates a passkey by itself after a saved password signs the user in
 - **First passkey:** optional checks before a user's first passkey: an emailed code, a helpdesk code, or their SSPR or NMAS security questions
 - **Recovery:** single-use recovery codes and helpdesk-issued tokens, with an optional cool-down after each recovery
 - **Approved authenticators:** an optional allow-list of authenticator models, checked against vendor attestation
@@ -26,6 +27,7 @@ A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 
 - [Password + passkey sign-in](#password--passkey-sign-in)
 - [Signing in with only a passkey](#signing-in-with-only-a-passkey)
 - [The first passkey](#the-first-passkey)
+- [Automatic passkey upgrade](#automatic-passkey-upgrade)
 - [Approved authenticators only](#approved-authenticators-only)
 - [Managing passkeys](#managing-passkeys)
 - [Recovery](#recovery)
@@ -55,7 +57,7 @@ This is a beta. What has been tested, and what hasn't yet:
 | Unit tests | Every ceremony against a software authenticator, configuration, recovery codes and tokens, emails, SSPR answer formats, the NMAS exchange against a fake server, log cleaning |
 | Browser tests on Access Manager 5.1.3 + eDirectory | Passkey-only sign-in by button and autofill, refusing a disabled account, the fallback link, the emailed first-passkey code, SSPR security questions, recovery codes, helpdesk tokens, `MAX_FAILED`, nothing secret in the log ([details](docs/BUILDING.md#browser-tests)) |
 | By hand | Touch ID with Safari and Chrome on macOS, including autofill |
-| **Not yet** | Active Directory user stores; NMAS security questions against a live directory; the helpdesk first-passkey check and the authenticator allow-list end to end (unit-tested only); Windows Hello, Android, password managers, hardware security keys and phone sign-in by QR code; multi-node clusters and containers; translations |
+| **Not yet** | Active Directory user stores; NMAS security questions against a live directory; the helpdesk first-passkey check, the authenticator allow-list and the automatic upgrade end to end (unit-tested only); Windows Hello, Android, password managers, hardware security keys and phone sign-in by QR code; multi-node clusters and containers; translations |
 
 ## Installing
 
@@ -74,7 +76,7 @@ To build from source, see [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Contracts
 
-The class runs in one of five modes, set with the `MODE` property on each Method. Each mode goes in its own contract:
+The class runs in one of six modes, set with the `MODE` property on each Method. Each mode goes in its own contract:
 
 | Contract | Methods, in order | `MODE` |
 |---|---|---|
@@ -83,6 +85,7 @@ The class runs in one of five modes, set with the `MODE` property on each Method
 | Manage passkeys | Name/Password, then a passkey method | `MANAGE` |
 | Recovery | Name/Password, then a passkey method | `RECOVERY` |
 | Helpdesk | Name/Password, then a passkey method | `HELPDESK` |
+| Password sign-in, optionally [upgraded](#automatic-passkey-upgrade) | Name/Password, then a passkey method | `UPGRADE` |
 
 Each mode except `LOGIN` acts on the user an earlier method signed in, so it needs Name/Password, or another method that identifies the user, before it in the contract.
 
@@ -92,7 +95,7 @@ Properties set on the Class apply to every method, and a Method's own value over
 
 | Property | Default | Notes |
 |---|---|---|
-| `MODE` | `MFA` | `MFA`, `LOGIN`, `MANAGE`, `RECOVERY`, `HELPDESK` |
+| `MODE` | `MFA` | `MFA`, `LOGIN`, `MANAGE`, `RECOVERY`, `HELPDESK`, `UPGRADE` |
 | `RP_ID` | required | WebAuthn relying party ID: a host name, with no scheme, port or path, and not an IP address. Use the IDP's own hostname (`login.example.com`). A parent domain (`example.com`) would also let other sites in that domain use the same passkeys, which is rarely wanted. Passkeys are tied to it for good: changing it later means everyone enrolls again |
 | `ORIGINS` | required | Comma list of `https://host[:port]` the IDP is reached on, exactly as in the browser's address bar; each must be on `RP_ID` or a subdomain. Include the port when it isn't 443, for example `https://login.example.com:8443` |
 | `RP_NAME` | `Access Manager` | |
@@ -106,7 +109,7 @@ Properties set on the Class apply to every method, and a Method's own value over
 | `CHALLENGE_TTL_SEC` | `300` | 30–3600 |
 | `ALLOW_USERNAMELESS` / `ALLOW_IDENTIFIER_FIRST` | `true` / `true` | `LOGIN` mode |
 | `ENROLL_IF_NONE` | `true` | `MFA` mode |
-| `ENROLL_GATES` | none | `MFA` and `MANAGE`: extra checks before a user's first passkey, in order, separated by commas: `email`, `helpdesk`, `questions`. See [The first passkey](#the-first-passkey) |
+| `ENROLL_GATES` | none | `MFA` and `MANAGE` (not allowed with `UPGRADE`): extra checks before a user's first passkey, in order, separated by commas: `email`, `helpdesk`, `questions`. See [The first passkey](#the-first-passkey) |
 | `QUESTIONS_STORE` | `sspr` | Where the `questions` check finds users' answers: `sspr` (an attribute SSPR writes) or `nmas` (eDirectory's NMAS Challenge Response) |
 | `QUESTIONS_SSPR_ATTRIBUTE` | `pwmResponseSet` | The attribute SSPR stores answers in (SSPR's `challenge.userAttribute`) |
 | `QUESTIONS_NMAS_SEQUENCE` | `Challenge Response` | With `nmas`: the NMAS login sequence to run. It must contain only the Challenge Response method |
@@ -130,7 +133,7 @@ Properties set on the Class apply to every method, and a Method's own value over
 | `NOTIFY_EMAIL` | `false` | Email users about passkey changes, recoveries and helpdesk codes. Set on the class. See [Notification emails](#notification-emails) |
 | `NOTIFY_MAIL_ATTRIBUTE` | `mail` | The user attribute holding their address |
 | `LAST_USED_WRITE_INTERVAL` | `86400` | Seconds between "last used" writes when nothing else changed |
-| `JSP_MFA`, `JSP_REGISTER`, `JSP_MANAGE`, `JSP_LOGIN`, `JSP_RECOVERY`, `JSP_CODES`, `JSP_HELPDESK`, `JSP_GATE` | `passkey_mfa` and so on | Page names, for a site using renamed copies |
+| `JSP_MFA`, `JSP_REGISTER`, `JSP_MANAGE`, `JSP_LOGIN`, `JSP_RECOVERY`, `JSP_CODES`, `JSP_HELPDESK`, `JSP_GATE`, `JSP_UPGRADE` | `passkey_mfa` and so on | Page names, for a site using renamed copies |
 
 An invalid configuration makes the class throw at load time, and a single warning lists every problem.
 
@@ -172,6 +175,7 @@ By default a user who has no passkey can create one right after the earlier meth
 | Setup | What it takes | Trade-off |
 |---|---|---|
 | Password only (default) | Nothing extra | A stolen password is enough to enroll |
+| [Automatic upgrade](#automatic-passkey-upgrade) (`MODE=UPGRADE`) | Nothing at all: the browser creates the passkey after a saved password | As password only, and the user may not notice |
 | An existing MFA method first | Put TOTP, email OTP or Advanced Authentication before the passkey method in the contract | Strongest, if users already have that factor |
 | `ENROLL_GATES=email` | A six-digit code is emailed to the user's `NOTIFY_MAIL_ATTRIBUTE` address through NAM's Email configuration. It works once, for 10 minutes; up to 5 can be sent per sign-in | Only as strong as the user's mailbox; needs a working mail setup and an address on each account |
 | `ENROLL_GATES=helpdesk` | A helpdesk agent issues a code from the `HELPDESK` contract, as for recovery. Needs `RECOVERY_PEPPER` on the class | Strong, but every user needs a helpdesk call |
@@ -185,6 +189,21 @@ With the default `QUESTIONS_STORE=sspr`, the `questions` check reads the answers
 
 With `QUESTIONS_STORE=nmas`, the answers stay in NMAS, where nobody can read them, and the check runs an NMAS login as the user with the `QUESTIONS_NMAS_SEQUENCE` sequence, against a replica of the user's own eDirectory user store over NAM's trusted TLS connection. eDirectory picks the questions; the login waits on its own thread, for up to `QUESTIONS_NMAS_TIMEOUT_SEC`, while the page shows them. The answers are lower-cased and only an HMAC of each is sent, as NMAS's own client does. The class runs the Challenge Response client method itself, with the NMAS client and LDAP libraries NAM already ships (`nmasclient.jar`, `ldap.jar`), so nothing else needs installing. A wrong answer is a failed eDirectory login, so it also counts towards eDirectory's intruder detection, and a page left open until it times out may too. eDirectory stops at the first wrong answer, so replies take at least a second either way. Each page asks afresh, so the random questions can change after a wrong answer.
 
+## Automatic passkey upgrade
+
+This is optional, and off unless you add it. A method with `MODE=UPGRADE` after Name/Password in a password contract lets the browser's password manager create a passkey by itself for a user who signs in with a saved password. The user isn't asked anything. The browser does this only when its password manager has just filled in that user's password, and then at most shows a notice that a passkey was saved. Whatever happens, the password still signs the user in. Once users have passkeys, they can use the [passkey-only](#signing-in-with-only-a-passkey) contract.
+
+To turn it on, create a Method with `MODE=UPGRADE` and add it after Name/Password in the contract users sign in with today. To turn it off, take the method out of the contract.
+
+![Automatic passkey upgrade](docs/diagrams/passkey_upgrade.svg)
+
+- **Users who have no passkey yet.** A user who already has one sees nothing. A password alone can't add a passkey to an account that has one.
+- **Same risk as enrolling with a password only.** Anyone who signs in with a stolen password from a password manager could get a passkey too, and the real user may not notice. That's why the class refuses to load with `ENROLL_GATES`, and with `ALLOWED_AAGUIDS` (password managers send no attestation to check). Turn on `NOTIFY_EMAIL` so users hear about passkeys they didn't expect. Where that risk isn't acceptable, enroll through `MFA` or `MANAGE` with [first-passkey checks](#the-first-passkey) instead.
+- **The passkey proves nothing on its own when it's created.** The browser makes it without checking the user's fingerprint, face or PIN, so it doesn't unlock the manage page. Signing in with it later does verify the user, as `LOGIN` mode requires.
+- **No recovery codes are shown**, so that the sign-in isn't interrupted. Users can create them on the manage page.
+- **Browser support.** Browsers that can do this include Safari 18 and later with Apple Passwords, and Chrome with Google Password Manager. Others skip the step. Browsers may also upgrade only when the passkey's user name matches the saved login's. The class uses the user's NAM user name, so users who sign in with something else, such as an email address, may not get one.
+- **The extra page.** Users with no passkey see "Signing you in..." for a moment while the browser decides, at most 8 seconds. The log says at fine level why each one was skipped, and at info level when a passkey was created.
+
 ## Approved authenticators only
 
 To let users register only approved models, usually particular hardware security keys, set `ALLOWED_AAGUIDS` to their AAGUIDs and `ATTESTATION_TRUST_ROOTS` to the vendors' attestation root certificates (for example Yubico's FIDO attestation root). The class then asks for attestation (`direct`) and accepts a new passkey only if its attestation certificate chains to one of those roots and its AAGUID is on the list. Anything else gets "This kind of passkey isn't allowed here", and the log says why.
@@ -193,6 +212,8 @@ To let users register only approved models, usually particular hardware security
 - Synced passkeys (iCloud Keychain, Google Password Manager) and most phones send no attestation, so with an allow-list they can't register. In practice it means hardware keys only.
 - It applies when a passkey is created. Passkeys registered before it was turned on keep working; remove them from the manage page if they shouldn't.
 - Revocation lists aren't checked, since nodes may have no route to the vendors' servers. Remove a root to stop trusting it.
+
+For a worked example, see [YubiKey-only passkeys, moving from certificate sign-in](docs/cookbooks/yubikey-only.md).
 
 ## Managing passkeys
 

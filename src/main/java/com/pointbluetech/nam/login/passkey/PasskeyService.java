@@ -109,9 +109,13 @@ final class PasskeyService {
     /**
      * Whether this login may register a passkey: a user with none (when enrollment is on), one who
      * registered their first during this login, or on the manage page, one who just proved a passkey.
-     * Checked at both start and finish, because a passkey can appear in between.
+     * An automatic upgrade is only ever for a user with none. Checked at both start and finish,
+     * because a passkey can appear in between.
      */
     boolean mayRegister(List<PasskeyRecord> existing) {
+        if (upgrading()) {
+            return existing.isEmpty();
+        }
         return state.enrolling()
                 || (existing.isEmpty() && config.enrollIfNone() && pendingGates(existing).isEmpty())
                 || recovering()
@@ -189,6 +193,11 @@ final class PasskeyService {
         return views;
     }
 
+    /** UPGRADE mode, where the browser's password manager creates the passkey by itself. */
+    private boolean upgrading() {
+        return config.mode() == PasskeyConfig.Mode.UPGRADE;
+    }
+
     /** This login is recovering an account and hasn't got its new passkey yet. */
     private boolean recovering() {
         return config.mode() == PasskeyConfig.Mode.RECOVERY && state.recovered() && !state.recoveryEnrolled();
@@ -209,14 +218,20 @@ final class PasskeyService {
         throw new CeremonyFailedException("error.notFound", "No such passkey");
     }
 
-    /** @return the options for {@code navigator.credentials.create()} */
+    /**
+     * @return the options for {@code navigator.credentials.create()}; in UPGRADE mode, for the
+     *         browser to use with {@code mediation: "conditional"}
+     */
     String startRegistration() throws CeremonyFailedException {
         checkMayRegister(store.load());
-        // User verification is always required to create a passkey, whatever sign-in later asks for
+        // User verification is always required to create a passkey, whatever sign-in later asks for,
+        // except when the browser creates one by itself: it asks the user nothing, so it can't verify
+        // them. That passkey is still discoverable, so it can be the only factor later on.
         AuthenticatorSelectionCriteria.AuthenticatorSelectionCriteriaBuilder selection =
                 AuthenticatorSelectionCriteria.builder()
-                        .residentKey(config.residentKey())
-                        .userVerification(UserVerificationRequirement.REQUIRED);
+                        .residentKey(upgrading() ? ResidentKeyRequirement.REQUIRED : config.residentKey())
+                        .userVerification(upgrading() ? UserVerificationRequirement.PREFERRED
+                                : UserVerificationRequirement.REQUIRED);
         config.authenticatorAttachment().ifPresent(selection::authenticatorAttachment);
         PublicKeyCredentialCreationOptions request = relyingParty.startRegistration(StartRegistrationOptions.builder()
                 .user(UserIdentity.builder()
@@ -245,6 +260,8 @@ final class PasskeyService {
             result = relyingParty.finishRegistration(FinishRegistrationOptions.builder()
                     .request(PublicKeyCredentialCreationOptions.fromJson(requestJson))
                     .response(PublicKeyCredential.parseRegistrationResponseJson(responseJson))
+                    // The browser created it without the user present, as conditional create does
+                    .isConditionalCreate(upgrading())
                     .build());
         } catch (RegistrationFailedException | IOException | IllegalArgumentException e) {
             throw new CeremonyFailedException("error.verify", "Registration rejected: " + e.getMessage(), e);
@@ -272,8 +289,11 @@ final class PasskeyService {
             updated.add(record);
             return updated;
         });
-        // Creating it required user verification, so it counts the same as using one
-        state.markVerified();
+        // Creating it required user verification, so it counts the same as using one; one the browser
+        // created by itself proves nothing beyond the password
+        if (!upgrading()) {
+            state.markVerified();
+        }
         if (config.mode() == PasskeyConfig.Mode.MFA) {
             state.setEnrolling(true);
         }

@@ -2,6 +2,10 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+- Optional automatic passkey upgrade (`MODE=UPGRADE`): after a user signs in with a password their browser's password manager filled in, the browser may create a passkey by itself, with no prompt (WebAuthn conditional create). Only for users with no passkey yet. It never stops the password sign-in. New page `passkey_upgrade.jsp`.
+
 ## 0.1.0-beta.1
 
 First public beta, for OpenText Access Manager 5.1.3 / 26.2 with eDirectory. An independent project, not an OpenText product or supported by OpenText. See the README's [Status](README.md#status) for what has and hasn't been tested yet.

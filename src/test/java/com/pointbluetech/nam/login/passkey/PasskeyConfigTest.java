@@ -105,6 +105,33 @@ class PasskeyConfigTest {
     }
 
     @Test
+    void upgradeModeNeedsNothingMore() {
+        Properties props = minimal();
+        props.setProperty("MODE", "upgrade");
+
+        PasskeyConfig config = PasskeyConfig.from(props);
+        assertEquals(PasskeyConfig.Mode.UPGRADE, config.mode());
+        assertEquals("passkey_upgrade", config.upgradeJsp());
+    }
+
+    @Test
+    void upgradeModeRefusesWhatABrowserCreatedPasskeyCannotSatisfy() {
+        String[][] cases = {
+                {"ENROLL_GATES", "email", "ENROLL_GATES can't be used in UPGRADE mode"},
+                {"ALLOWED_AAGUIDS", "ee882879-721c-4913-9775-3dfcce97072a", "ALLOWED_AAGUIDS can't be used in UPGRADE mode"},
+                {"AUTHENTICATOR_ATTACHMENT", "cross-platform", "can't be cross-platform in UPGRADE mode"},
+        };
+        for (String[] c : cases) {
+            Properties props = minimal();
+            props.setProperty("MODE", "UPGRADE");
+            props.setProperty(c[0], c[1]);
+
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> PasskeyConfig.from(props));
+            assertTrue(e.getMessage().contains(c[2]), e.getMessage());
+        }
+    }
+
+    @Test
     void reportsAllProblemsAtOnce() {
         Properties props = new Properties();
         props.setProperty("MODE", "sideways");

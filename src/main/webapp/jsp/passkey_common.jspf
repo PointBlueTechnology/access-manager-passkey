@@ -152,13 +152,18 @@ window.PbtPasskey = (function (previousPage) {
         });
     }
 
-    function create() {
+    /** @param mediation "conditional" for the browser to create one by itself, if it will, without asking */
+    function create(mediation) {
         var options = readOptions();
         options.challenge = toBuffer(options.challenge);
         options.user = Object.assign({}, options.user, { id: toBuffer(options.user.id) });
         options.excludeCredentials = descriptors(options.excludeCredentials);
         return begin(function (signal) {
-            return navigator.credentials.create({ publicKey: options, signal: signal });
+            var request = { publicKey: options, signal: signal };
+            if (mediation) {
+                request.mediation = mediation;
+            }
+            return navigator.credentials.create(request);
         }).then(function (credential) {
             var r = credential.response;
             var response = {
@@ -181,6 +186,18 @@ window.PbtPasskey = (function (previousPage) {
             return Promise.resolve(false);
         }
         return PublicKeyCredential.isConditionalMediationAvailable();
+    }
+
+    /** Whether the browser can create a passkey by itself after its password manager fills in a password. */
+    function isConditionalCreateAvailable() {
+        if (!isSupported() || !PublicKeyCredential.getClientCapabilities) {
+            return Promise.resolve(false);
+        }
+        return PublicKeyCredential.getClientCapabilities().then(function (capabilities) {
+            return !!(capabilities && capabilities.conditionalCreate);
+        }, function () {
+            return false;
+        });
     }
 
     function errorMessage(error) {
@@ -237,6 +254,7 @@ window.PbtPasskey = (function (previousPage) {
         create: create,
         isSupported: isSupported,
         isAutofillAvailable: isAutofillAvailable,
+        isConditionalCreateAvailable: isConditionalCreateAvailable,
         onActivate: onActivate,
         errorMessage: errorMessage,
         showMessage: showMessage,

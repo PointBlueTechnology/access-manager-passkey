@@ -44,7 +44,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * NAM creates instances freely during a login, so this class keeps no per-login fields: ceremony
  * state lives in the session ({@link CeremonyState}) and the rules in {@link PasskeyService}.
  * All modes are implemented: MFA with inline enrollment, MANAGE, LOGIN where the passkey is the only
- * factor, RECOVERY for users who lost every passkey, and HELPDESK for issuing recovery tokens.
+ * factor, RECOVERY for users who lost every passkey, HELPDESK for issuing recovery tokens, and
+ * UPGRADE, where the browser's password manager may create a passkey by itself after a password.
  */
 public class PasskeyAuthClass extends LocalAuthenticationClass {
 
@@ -62,6 +63,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
     private static final String ACTION_ISSUE = "issue";
     private static final String ACTION_GATE = "gate";
     private static final String ACTION_GATE_SEND = "gate_send";
+    private static final String ACTION_SKIP = "skip";
 
     private static final String PARAM_ACTION = "pk_action";
     private static final String PARAM_RESPONSE = "pk_response";
@@ -71,6 +73,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
     private static final String PARAM_USER_ID = "pk_userid";
     private static final String PARAM_CODE = "pk_code";
     private static final String PARAM_TARGET = "pk_target";
+    private static final String PARAM_REASON = "pk_reason";
     private static final int HELPDESK_CHECKS = 3;
     private static final long GATE_CODE_TTL_MS = 10 * 60 * 1000L;
     private static final int GATE_CODE_MAX_SENDS = 5;
@@ -167,17 +170,74 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                     return handleRecovery(service, state, principal);
                 case HELPDESK:
                     return handleHelpdesk(service, state, principal);
+                case UPGRADE:
+                    return handleUpgrade(service, state, principal);
                 default:
                     return handle(service, state, principal);
             }
         } catch (IllegalArgumentException e) {
             logWarning("Cannot use passkeys for " + principal.getUserIdentifier() + ": " + e.getMessage());
-            return showError("error.account");
+            return config.mode() == PasskeyConfig.Mode.UPGRADE ? finishWithoutUpgrade(principal) : showError("error.account");
         } catch (PasskeyStoreException e) {
             // Never carry on as if the user had no passkeys
             logWarning(e.getMessage());
-            return showError("error.store");
+            return config.mode() == PasskeyConfig.Mode.UPGRADE ? finishWithoutUpgrade(principal) : showError("error.store");
         }
+    }
+
+    /**
+     * UPGRADE mode, after a password: for a user with no passkey, the page asks the browser to create
+     * one by itself (WebAuthn conditional create). Browsers do that only when their password manager
+     * just filled in this user's password, and the user sees at most a notice that it was saved.
+     * It never stands in the way of signing in: no passkey, a browser that can't, a refusal or an
+     * error all simply finish the method, so the password alone still signs the user in.
+     */
+    private int handleUpgrade(PasskeyService service, CeremonyState state, NIDPPrincipal principal) {
+        String action = m_Request.getParameter(PARAM_ACTION);
+        String user = principal.getUserIdentifier();
+        logFine("doAuthenticate upgrade action=" + action + ", firstCall=" + isFirstCallAfterPrevMethod());
+
+        if (ACTION_REGISTER.equals(action)) {
+            try {
+                PasskeyRecord added = service.finishRegistration(m_Request.getParameter(PARAM_RESPONSE), null);
+                logInfo("The browser created passkey '" + added.name() + "' for " + user + " after the password");
+                notifyUser(Notification.PASSKEY_ADDED, principal, added.name());
+            } catch (CeremonyFailedException e) {
+                logWarning("Automatic passkey upgrade failed for " + user + ": " + e.getMessage());
+            }
+            return signIn(state, principal);
+        }
+        if (action != null) {
+            logFine("No automatic passkey for " + user + ": " + upgradeSkipReason());
+            return signIn(state, principal);
+        }
+        if (!service.mayRegister(service.passkeys())) {
+            logFine("No automatic passkey for " + user + ": already has one");
+            return signIn(state, principal);
+        }
+        if (isFramePageNeeded()) {
+            return showFramePage(state, null);
+        }
+        try {
+            PageToShow page = page(config.upgradeJsp(), null);
+            page.addAttribute("pk_options", (Object) PasskeyMessages.jsonForScriptTag(service.startRegistration()));
+            return SHOW_JSP;
+        } catch (CeremonyFailedException e) {
+            logFine("No automatic passkey for " + user + ": " + e.getMessage());
+            return signIn(state, principal);
+        }
+    }
+
+    /** What the page reported, kept to a short word: it's from the browser, so it may be anything. */
+    private String upgradeSkipReason() {
+        String reason = m_Request.getParameter(PARAM_REASON);
+        return reason != null && reason.matches("[A-Za-z]{1,40}") ? reason : "unknown";
+    }
+
+    /** The password has already signed the user in; a passkey problem mustn't undo that. */
+    private int finishWithoutUpgrade(NIDPPrincipal principal) {
+        setPrincipal(principal);
+        return AUTHENTICATED;
     }
 
     /** LOGIN mode: nobody has been identified yet, so the state belongs to no particular user. */

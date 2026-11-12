@@ -94,7 +94,7 @@ Add the jar:
 5. Turn on **Restart Identity Server**. Leave **Temporary Modification** off, so the file is kept across NAM upgrades. Set **Modification Type** to something you can search for, such as `Passkey authentication`, and put the bundle version in **Description**.
 6. Click **OK**.
 
-Add each JSP the same way, with **File Path** `/opt/novell/nids/lib/webapp/jsp`: `passkey_codes.jsp`, `passkey_common.jspf`, `passkey_gate.jsp`, `passkey_helpdesk.jsp`, `passkey_login.jsp`, `passkey_manage.jsp`, `passkey_mfa.jsp`, `passkey_recovery.jsp` and `passkey_register.jsp`. They don't need **Restart Identity Server**. The bundle's `jsp/` folder is the authoritative list for each version.
+Add each JSP the same way, with **File Path** `/opt/novell/nids/lib/webapp/jsp`: `passkey_codes.jsp`, `passkey_common.jspf`, `passkey_gate.jsp`, `passkey_helpdesk.jsp`, `passkey_login.jsp`, `passkey_manage.jsp`, `passkey_mfa.jsp`, `passkey_recovery.jsp`, `passkey_register.jsp` and `passkey_upgrade.jsp`. They don't need **Restart Identity Server**. The bundle's `jsp/` folder is the authoritative list for each version.
 
 Then apply them:
 
