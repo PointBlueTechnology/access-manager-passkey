@@ -32,7 +32,7 @@
         <!-- Yubico declares version ranges; pin them so builds are reproducible.
              Everything below is shaded and relocated, so it never meets the IDP's own copies. -->
         <jackson.version>2.22.4</jackson.version>
-        <guava.version>33.7.2-jre</guava.version>
+        <guava.version>33.8.0-jre</guava.version>
         <cbor.version>4.5.6</cbor.version>
         <httpclient5.version>5.6.5</httpclient5.version>
         <!-- 1.7.x so our StaticLoggerBinder (src/main/java/org/slf4j/impl) is the binding -->
