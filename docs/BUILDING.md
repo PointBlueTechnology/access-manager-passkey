@@ -53,7 +53,8 @@ mvn test
 The unit tests need no server. They run real WebAuthn ceremonies against a software authenticator, including packed attestation for the authenticator allow-list. They check:
 
 - the challenge, replay and sign-counter rules
-- configuration validation
+- configuration validation, including the options `UPGRADE` mode refuses
+- the automatic upgrade: a registration without user presence or verification is accepted only in `UPGRADE` mode, only for a user with no passkey, and doesn't unlock the manage page
 - recovery codes and helpdesk tokens
 - notification emails
 - SSPR answer formats, using records written by SSPR's own library (ldapchai, test scope only)
@@ -81,7 +82,7 @@ They cover:
 - ending an attempt after `MAX_FAILED` wrong codes
 - that no code, token or test password reaches the log or an email
 
-Touch ID and Safari autofill are tested by hand.
+Touch ID, Safari autofill and the automatic upgrade are tested by hand, because the upgrade needs a real password manager that has just filled in the password.
 
 ### Setup
 

@@ -124,5 +124,6 @@ Each point has a unit test, and the browser tests cover the flows end to end. Wh
 - Active Directory user stores: test the existing AD code paths, and add AD schema guidance
 - Translations of the pages and emails
 - End-to-end tests for the helpdesk first-passkey check and the authenticator allow-list
+- Testing the automatic upgrade in Safari and Chrome, including which saved logins browsers match to the passkey's user name
 - Testing on more authenticators: Windows Hello, Android, password managers, hardware security keys, and phone sign-in by QR code
 - Testing on multi-node clusters and containers

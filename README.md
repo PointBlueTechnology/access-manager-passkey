@@ -44,7 +44,7 @@ A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 
 - OpenText Access Manager 5.1.3 / 26.2 Identity Server, reached over HTTPS on a DNS name (WebAuthn doesn't work on an IP address or over plain HTTP)
 - Java 11 or newer on the Identity Server; passkeys that use Ed25519 need Java 15 or newer
 - An eDirectory user store. The class has Active Directory code paths, but they're untested
-- A browser with WebAuthn: current Chrome, Edge, Safari or Firefox. Passkeys in the ID field's autofill need a browser that offers them there (Chrome, Edge and Safari do)
+- A browser with WebAuthn: current Chrome, Edge, Safari or Firefox. Passkeys in the ID field's autofill need a browser that offers them there (Chrome, Edge and Safari do). The [automatic upgrade](#automatic-passkey-upgrade) needs a browser whose password manager can create passkeys by itself; others skip it
 - For `ENROLL_GATES=email` and notification emails: NAM's email configuration
 - The pages are in English only; messages live in one properties file, ready for translations
 
@@ -154,7 +154,7 @@ Create a Method on the class with the property `MODE=LOGIN` and **Identifies Use
 
 ![Passkey-only sign-in](docs/diagrams/passkey_only_sign_in.svg)
 
-`LOGIN` mode can't enroll, so users get their first passkey through an `MFA` or `MANAGE` contract.
+`LOGIN` mode can't enroll, so users get their first passkey through an `MFA` or `MANAGE` contract, or from their browser through an [`UPGRADE`](#automatic-passkey-upgrade) method.
 
 Since no password is checked, eDirectory never gets the chance to refuse a bind, so the class checks the account itself. On eDirectory it refuses when `loginDisabled` is TRUE, an intruder lockout hasn't reset yet, or `loginExpirationTime` has passed. It then also runs NAM's login policy check (NMAS), and refuses the sign-in unless that passes outright. The class's own check doesn't depend on what NMAS's policy covers. On AD, NAM's check reads `userAccountControl` itself. Anything the class can't read refuses. Grant the user store's proxy account read access to `loginDisabled`, `lockedByIntruder`, `loginIntruderResetTime` and `loginExpirationTime`, because without it they read as unset. Time-of-day and address restrictions aren't checked.
 
@@ -207,6 +207,8 @@ To turn it on, create a Method with `MODE=UPGRADE` and add it after Name/Passwor
 ## Approved authenticators only
 
 To let users register only approved models, usually particular hardware security keys, set `ALLOWED_AAGUIDS` to their AAGUIDs and `ATTESTATION_TRUST_ROOTS` to the vendors' attestation root certificates (for example Yubico's FIDO attestation root). The class then asks for attestation (`direct`) and accepts a new passkey only if its attestation certificate chains to one of those roots and its AAGUID is on the list. Anything else gets "This kind of passkey isn't allowed here", and the log says why.
+
+![Registering an approved security key](docs/diagrams/approved_authenticator.svg)
 
 - An AAGUID on its own proves nothing: any software can claim one. That's why the trusted roots are required, and the all-zero AAGUID can't be listed.
 - Synced passkeys (iCloud Keychain, Google Password Manager) and most phones send no attestation, so with an allow-list they can't register. In practice it means hardware keys only.

@@ -74,6 +74,10 @@ Don't use `UPGRADE` mode. Password managers create those passkeys, and the class
 | **Recovery** | X.509 certificate, then `MODE=RECOVERY` | For a user who has lost every YubiKey but still has a certificate |
 | **Helpdesk** | YubiKey sign-in or X.509, then `MODE=HELPDESK` with `HELPDESK_GROUP_DN` | Agents issue recovery tokens; they must prove their own passkey too |
 
+This is how a user registers their YubiKey through **Enroll a YubiKey**, and what happens to anything else:
+
+![Registering an approved security key](../diagrams/approved_authenticator.svg)
+
 Putting the certificate before `MANAGE` is the strongest way to protect the first passkey: it's the "existing MFA method first" row in the README's [first-passkey](../../README.md#the-first-passkey) table. You don't need `ENROLL_GATES`. Never put Name/Password in front of the enrollment contract on its own.
 
 The X.509 method must identify the user, as it does for certificate sign-in today, because `MANAGE` acts on the user the earlier method signed in.

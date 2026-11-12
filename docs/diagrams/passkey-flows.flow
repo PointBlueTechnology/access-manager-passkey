@@ -237,3 +237,31 @@ sequence passkey_upgrade "Automatic passkey upgrade (MODE=UPGRADE)"
     pk --> idp: authenticated (the password alone, whatever happened)
     deactivate pk
     idp --> browser: back to the application, signed in
+
+sequence approved_authenticator "Registering an approved security key (ALLOWED_AAGUIDS)"
+    participant user "User" { type: actor }
+    participant browser "Browser"
+    participant key "Security key\n(e.g. YubiKey)"
+    participant pk "Passkey method\n(MODE=MANAGE)"
+    participant dir "User store\n(eDirectory)" { type: database }
+
+    user -> browser: signs in through the enrollment contract
+    note over browser, pk: an earlier method, such as an X.509 certificate, identifies the user
+    browser -> +pk: run the passkey method for this user
+    pk --> browser: manage page
+    user -> browser: Add a passkey
+    pk --> browser: registration options: direct attestation,\nuser verification required
+    browser -> user: security key prompt
+    user -> key: PIN and touch
+    key --> browser: new passkey, with an attestation\nsigned by the vendor's certificate
+    browser -> pk: registration response
+    note over pk: checks the attestation chains to\nATTESTATION_TRUST_ROOTS, then the\nAAGUID against ALLOWED_AAGUIDS
+    alt trusted attestation and an allowed AAGUID
+        pk -> dir: store the passkey
+        pk --> browser: manage page: passkey added
+        note over pk: emails "passkey added" if NOTIFY_EMAIL is on
+    else no attestation (synced passkeys, most phones), an untrusted root, or another model
+        note over pk: logs the AAGUID, the model if known,\nand why it was refused
+        pk --> browser: "This kind of passkey isn't allowed here"
+    end
+    deactivate pk
