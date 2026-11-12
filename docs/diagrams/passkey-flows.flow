@@ -1,0 +1,203 @@
+flowdiagram 1
+# Sequence diagrams for the NAM passkey authentication class.
+# Render them to SVG with scripts/render-diagrams.sh after any change.
+
+sequence mfa_sign_in "Password + passkey sign-in (MODE=MFA)"
+    participant user "User" { type: actor }
+    participant browser "Browser and\npasskey provider"
+    participant idp "NAM Identity Server"
+    participant pk "Passkey method"
+    participant dir "User store\n(eDirectory)" { type: database }
+
+    user -> browser: opens a protected application
+    browser -> idp: contract: Name/Password, then the passkey method
+    idp --> browser: Name/Password page
+    user -> browser: user ID and password
+    browser -> idp: POST credentials
+    idp -> dir: bind as the user
+    dir --> idp: ok
+    idp -> +pk: run the passkey method for this user
+    pk -> dir: read the passkey attribute
+    dir --> pk: stored passkeys
+    alt the user has passkeys
+        pk --> browser: passkey page (challenge, the user's credential IDs)
+        browser -> user: passkey prompt with user verification
+        user -> browser: Touch ID, Windows Hello, PIN or security key
+        browser -> pk: signed assertion
+        note over pk: checks signature, challenge, origin,\nRP ID, user handle and sign counter
+        pk -> dir: update the sign counter and last used time
+        pk --> idp: authenticated
+    else no passkey yet (ENROLL_IF_NONE=true)
+        ref over browser, dir: First passkey { opens: first_passkey }
+        pk --> idp: authenticated
+    end
+    deactivate pk
+    idp --> browser: back to the application, signed in
+
+sequence passkey_only_sign_in "Passkey-only sign-in (MODE=LOGIN)"
+    participant user "User" { type: actor }
+    participant browser "Browser and\npasskey provider"
+    participant idp "NAM Identity Server"
+    participant pk "Passkey method"
+    participant dir "User store\n(eDirectory)" { type: database }
+
+    user -> browser: opens a protected application
+    browser -> idp: contract with only the passkey method
+    idp -> +pk: run the passkey method (Identifies User on)
+    pk --> browser: sign-in page with a challenge for any passkey on this site
+    alt passkey alone (ALLOW_USERNAMELESS)
+        user -> browser: picks a passkey from the ID field's autofill,\nor chooses Sign in with a passkey
+    else user ID + passkey (ALLOW_IDENTIFIER_FIRST)
+        user -> browser: types a user ID, chooses Continue
+        browser -> pk: user ID
+        pk -> dir: find the user
+        alt found, with passkeys
+            pk --> browser: challenge listing that user's passkeys
+        else unknown, or no passkeys
+            pk --> browser: challenge listing a decoy passkey,\nthe same for that ID on every node
+        end
+    end
+    browser -> user: passkey prompt with user verification
+    user -> browser: Touch ID, Windows Hello, PIN or security key
+    browser -> pk: signed assertion, with the user handle (the user's GUID)
+    pk -> dir: find the user by GUID and read their passkeys
+    note over pk: checks signature, challenge, origin,\nRP ID, user verification and sign counter
+    pk -> dir: read loginDisabled, intruder lockout and expiry
+    pk -> idp: NAM login policy check (NMAS)
+    alt account allowed
+        pk -> dir: update the sign counter and last used time
+        pk --> idp: authenticated as this user
+        idp --> browser: back to the application, signed in
+    else disabled, locked, expired or unreadable
+        pk --> browser: Sign-in failed
+    end
+    deactivate pk
+
+sequence first_passkey "First passkey and enrollment checks (MODE=MFA or MANAGE)"
+    participant user "User" { type: actor }
+    participant browser "Browser and\npasskey provider"
+    participant pk "Passkey method"
+    participant dir "User store\n(eDirectory)" { type: database }
+    participant mail "Mail server" { type: queue }
+
+    note over browser, pk: The user has signed in with the contract's earlier methods\nand has no passkey yet
+    loop each check in ENROLL_GATES, in order
+        alt email
+            pk -) mail: 6-digit code to the user's address\n(only a hash stays in the session)
+            mail -) user: setup code
+            user -> browser: enters the code
+            browser -> pk: code
+        else helpdesk
+            user -> browser: enters the token the helpdesk issued
+            browser -> pk: token
+            pk -> dir: match its HMAC and remove it
+        else questions, SSPR store
+            pk -> dir: read the SSPR response attribute
+            pk --> browser: required questions plus random ones
+            user -> browser: answers
+            browser -> pk: answers
+            note over pk: hashed and compared locally,\nin SSPR's own format
+        else questions, NMAS store
+            pk -> +dir: NMAS login as the user (SASL NMAS_LOGIN)
+            dir --> pk: questions eDirectory picked
+            pk --> browser: questions (the login waits)
+            user -> browser: answers
+            browser -> pk: answers
+            pk -> dir: an HMAC of each answer
+            dir --> -pk: pass or fail
+        end
+        note over pk: a wrong entry counts towards MAX_FAILED
+    end
+    pk --> browser: registration challenge (user handle = GUID)
+    browser -> user: create a passkey, with user verification
+    user -> browser: Touch ID, Windows Hello, PIN or security key
+    browser -> pk: new credential and the name the user chose
+    note over pk: checks the response, and with ALLOWED_AAGUIDS\nthe attestation chain and model
+    pk -> dir: add the passkey (and the auxiliary class, if set)
+    opt RECOVERY_PEPPER is set
+        pk -> dir: store HMACs of new recovery codes
+        pk --> browser: recovery codes, shown once
+    end
+    opt NOTIFY_EMAIL=true
+        pk -) mail: passkey added (no codes)
+    end
+    user -> browser: Done
+    browser -> pk: finish
+    pk --> browser: authenticated
+
+sequence account_recovery "Account recovery (MODE=RECOVERY)"
+    participant user "User" { type: actor }
+    participant browser "Browser and\npasskey provider"
+    participant idp "NAM Identity Server"
+    participant pk "Passkey method"
+    participant dir "User store\n(eDirectory)" { type: database }
+    participant mail "Mail server" { type: queue }
+
+    note over user, browser: Every passkey is lost
+    browser -> idp: recovery contract: Name/Password, then the passkey method
+    user -> browser: user ID and password
+    idp -> dir: bind as the user
+    idp -> +pk: run the passkey method for this user
+    pk --> browser: recovery page
+    user -> browser: a recovery code, or a token from the helpdesk
+    browser -> pk: code
+    pk -> dir: match its HMAC (with RECOVERY_PEPPER) and remove it
+    alt no match, or a token past its expiry
+        pk --> browser: wrong code; after MAX_FAILED the attempt ends
+    else matched
+        pk -> dir: record the recovery time
+        opt NOTIFY_EMAIL=true
+            pk -) mail: account recovered with a code or helpdesk token
+        end
+        pk --> browser: registration challenge
+        browser -> user: create a passkey, with user verification
+        browser -> pk: new credential and name
+        pk -> dir: add the passkey
+        opt NOTIFY_EMAIL=true
+            pk -) mail: passkey added
+        end
+        pk --> browser: manage page: the new passkey is marked;\nthe user removes the lost ones
+        note over pk, dir: new recovery codes are held back\nfor RECOVERY_COOLDOWN_SEC
+        user -> browser: Done
+        pk --> idp: authenticated
+    end
+    deactivate pk
+
+sequence helpdesk_token "Helpdesk token (MODE=HELPDESK)"
+    participant agent "Helpdesk agent" { type: actor }
+    participant agentBrowser "Agent's browser"
+    participant idp "NAM Identity Server"
+    participant pk "Passkey method"
+    participant dir "User store\n(eDirectory)" { type: database }
+    participant mail "Mail server" { type: queue }
+    participant user "User" { type: actor }
+
+    user -> agent: asks for help, by phone or in person
+    agentBrowser -> idp: helpdesk contract: Name/Password, then the passkey method
+    agent -> agentBrowser: agent's ID and password
+    idp -> dir: bind as the agent
+    idp -> +pk: run the passkey method for the agent
+    pk -> dir: read the agent's group membership (on every request)
+    alt not in HELPDESK_GROUP_DN or HELPDESK_ALLOWED_DNS
+        pk --> agentBrowser: refused
+    else allowed
+        pk --> agentBrowser: confirm with your own passkey
+        agent -> agentBrowser: passkey with user verification
+        agentBrowser -> pk: signed assertion
+        note over agent: verifies the caller's identity
+        agent -> agentBrowser: ticks every identity check, enters the user's ID
+        agentBrowser -> pk: issue a token
+        pk -> dir: find the user (never the agent's own account)
+        pk -> dir: store the token's HMAC and expiry (ENROLL_TOKEN_TTL_SEC)
+        opt NOTIFY_EMAIL=true
+            pk -) mail: a helpdesk code was issued (no code)
+            mail -) user: notification
+        end
+        pk --> agentBrowser: the token, shown once
+        agent -> user: reads out the token
+        note over user: uses it once, on the recovery page\nor as the first-passkey helpdesk check
+        ref over user, agent: Account recovery { opens: account_recovery }
+        agent -> agentBrowser: Done
+        pk --> idp: authenticated
+    end
+    deactivate pk

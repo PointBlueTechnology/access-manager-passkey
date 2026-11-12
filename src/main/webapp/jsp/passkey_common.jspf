@@ -1,0 +1,246 @@
+<%--
+    Shared by the passkey pages through a static include. Sets up the page variables and defines
+    window.PbtPasskey. The pages load either inside the stock login frame (content fetched over AJAX
+    into #theNidpContent, where jQuery runs inline scripts) or standalone with MainJSP=true.
+
+    All WebAuthn binary fields cross the wire as base64url, the format the Yubico library reads.
+--%>
+<%@ page import="java.util.Locale" %>
+<%@ page import="com.novell.nidp.*" %>
+<%@ page import="com.novell.nidp.common.util.HTMLUtil" %>
+<%@ page import="com.novell.nidp.edirConfig.NIDPEdirConfigUtil" %>
+<%@ page import="com.novell.nidp.localconfig.NIDPConfigKeys" %>
+<%@ page import="com.pointbluetech.nam.login.passkey.PasskeyMessages" %>
+<%!
+    /** Text for HTML content and attributes. */
+    private static String pkHtml(Object value) {
+        return value == null ? "" : HTMLUtil.stringToHTMLString(String.valueOf(value));
+    }
+
+    /** Text for a double-quoted JavaScript string. */
+    private static String pkJs(Locale locale, String key) {
+        return HTMLUtil.stringToJavaScriptString(PasskeyMessages.get(locale, key));
+    }
+%>
+<%
+    Locale pkLocale = request.getLocale();
+
+    String pkSid = request.getParameter(NIDPConstants.SID) != null
+            ? request.getParameter(NIDPConstants.SID)
+            : (String) request.getAttribute(NIDPConstants.SID);
+    NIDPSessionData pkSessionData = NIDPContext.getNIDPContext().getSession(request).getSessionData(pkSid);
+    boolean pkCsrfRequired = NIDPEdirConfigUtil.isConfigured(NIDPConfigKeys.LOGIN_CSRF_CHECK.name())
+            && NIDPEdirConfigUtil.getValueAsBoolean(NIDPConfigKeys.LOGIN_CSRF_CHECK.name());
+
+    boolean pkStandalone = !"contentDiv".equals(request.getParameter(NIDPConstants.HTTP_REQUEST_PARAM_NAME_UIDESTINATION));
+    String pkFormUrl = pkHtml(request.getAttribute("url"));
+    String pkMessage = (String) request.getAttribute("pk_message");
+    String pkFallback = (String) request.getAttribute("pk_fallback");
+    String pkRecoveryUrl = (String) request.getAttribute("pk_recovery_url");
+
+    if (pkStandalone) {
+%>
+<!DOCTYPE html>
+<html lang="<%=pkHtml(pkLocale.getLanguage())%>">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Access Manager</title>
+    <link href="<%=request.getContextPath()%>/css/ux_access.css" rel="stylesheet" type="text/css" media="screen">
+</head>
+<body>
+<%  } %>
+<script>
+window.PbtPasskey = (function (previousPage) {
+    // A browser allows one WebAuthn request at a time, and asking again before an aborted one has
+    // finished can leave the new one hanging. So each request waits for the last to end, or for a
+    // moment if a browser never reports that it did. That covers both the autofill request on this
+    // page and a request from a copy of the page this one replaced (pressing Sign In twice renders
+    // the page twice).
+    var controller = null;
+    var pending = previousPage && previousPage.abort ? previousPage.abort() : Promise.resolve();
+
+    function begin(request) {
+        controller = new AbortController();
+        var signal = controller.signal;
+        var result = pending.then(function () {
+            return request(signal);
+        });
+        pending = result.then(function () {}, function () {});
+        return result;
+    }
+
+    function abort() {
+        if (controller) {
+            controller.abort();
+        }
+        pending = Promise.race([pending, new Promise(function (resolve) { setTimeout(resolve, 1000); })]);
+        return pending;
+    }
+
+    var messages = {
+        browser: "<%=pkJs(pkLocale, "error.browser")%>",
+        cancelled: "<%=pkJs(pkLocale, "error.cancelled")%>",
+        alreadyRegistered: "<%=pkJs(pkLocale, "error.alreadyRegistered")%>",
+        security: "<%=pkJs(pkLocale, "error.security")%>",
+        unknown: "<%=pkJs(pkLocale, "error.unknown")%>"
+    };
+
+    function toBuffer(base64url) {
+        var base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+        var binary = atob(base64 + "===".slice((base64.length + 3) % 4));
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+
+    function toBase64Url(buffer) {
+        var bytes = new Uint8Array(buffer);
+        var binary = "";
+        for (var i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    function descriptors(list) {
+        return (list || []).map(function (d) {
+            return Object.assign({}, d, { id: toBuffer(d.id) });
+        });
+    }
+
+    /** Reads the options the server embedded in the page; returns the inner publicKey object. */
+    function readOptions() {
+        return JSON.parse(document.getElementById("pk_options").textContent).publicKey;
+    }
+
+    function credentialJson(credential, response) {
+        return JSON.stringify({
+            id: credential.id,
+            rawId: toBase64Url(credential.rawId),
+            type: credential.type,
+            authenticatorAttachment: credential.authenticatorAttachment || undefined,
+            clientExtensionResults: credential.getClientExtensionResults(),
+            response: response
+        });
+    }
+
+    /** @param mediation "conditional" to wait in the browser's autofill instead of opening a dialog */
+    function get(mediation) {
+        var options = readOptions();
+        options.challenge = toBuffer(options.challenge);
+        options.allowCredentials = descriptors(options.allowCredentials);
+        return begin(function (signal) {
+            var request = { publicKey: options, signal: signal };
+            if (mediation) {
+                request.mediation = mediation;
+            }
+            return navigator.credentials.get(request);
+        }).then(function (credential) {
+            var r = credential.response;
+            var response = {
+                clientDataJSON: toBase64Url(r.clientDataJSON),
+                authenticatorData: toBase64Url(r.authenticatorData),
+                signature: toBase64Url(r.signature)
+            };
+            if (r.userHandle && r.userHandle.byteLength > 0) {
+                response.userHandle = toBase64Url(r.userHandle);
+            }
+            return credentialJson(credential, response);
+        });
+    }
+
+    function create() {
+        var options = readOptions();
+        options.challenge = toBuffer(options.challenge);
+        options.user = Object.assign({}, options.user, { id: toBuffer(options.user.id) });
+        options.excludeCredentials = descriptors(options.excludeCredentials);
+        return begin(function (signal) {
+            return navigator.credentials.create({ publicKey: options, signal: signal });
+        }).then(function (credential) {
+            var r = credential.response;
+            var response = {
+                clientDataJSON: toBase64Url(r.clientDataJSON),
+                attestationObject: toBase64Url(r.attestationObject)
+            };
+            if (r.getTransports) {
+                response.transports = r.getTransports();
+            }
+            return credentialJson(credential, response);
+        });
+    }
+
+    function isSupported() {
+        return !!(window.PublicKeyCredential && navigator.credentials);
+    }
+
+    function isAutofillAvailable() {
+        if (!isSupported() || !PublicKeyCredential.isConditionalMediationAvailable) {
+            return Promise.resolve(false);
+        }
+        return PublicKeyCredential.isConditionalMediationAvailable();
+    }
+
+    function errorMessage(error) {
+        switch (error && error.name) {
+            case "NotAllowedError":
+                return messages.cancelled;
+            case "InvalidStateError":
+                return messages.alreadyRegistered;
+            case "SecurityError":
+                return messages.security;
+            default:
+                return messages.unknown;
+        }
+    }
+
+    function showMessage(text) {
+        var element = document.getElementById("pk_msg");
+        element.textContent = text || "";
+        element.style.display = text ? "block" : "none";
+    }
+
+    /** Makes a stock-styled span behave as a button, from the mouse or the keyboard. */
+    function onActivate(element, handler) {
+        element.addEventListener("click", handler);
+        element.addEventListener("keyup", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+                handler();
+            }
+        });
+    }
+
+    /** Posts the way the stock pages do: into the content area in the frame, otherwise a plain submit. */
+    function post(form) {
+        if (document.getElementById("runningInEndUserLoginEnvironment") && window.jQuery && window.updateQueryString) {
+            var url = updateQueryString("<%=NIDPConstants.HTTP_REQUEST_PARAM_NAME_UIDESTINATION%>",
+                    "<%=NIDPConstants.HTTP_REQUEST_PARAM_NAME_UIDESTINATION_VALUE_CONTENTDIV%>", form.action);
+            jQuery.post(url, jQuery(form).serialize())
+                .done(function (data) {
+                    jQuery("#theNidpContent").html(data);
+                })
+                .fail(function (xhr, status, error) {
+                    console.warn("Passkey post failed:", xhr.status, status, error, url);
+                    showMessage(messages.unknown);
+                });
+        } else {
+            form.submit();
+        }
+    }
+
+    return {
+        abort: abort,
+        browserMessage: messages.browser,
+        get: get,
+        create: create,
+        isSupported: isSupported,
+        isAutofillAvailable: isAutofillAvailable,
+        onActivate: onActivate,
+        errorMessage: errorMessage,
+        showMessage: showMessage,
+        post: post
+    };
+})(window.PbtPasskey);
+</script>

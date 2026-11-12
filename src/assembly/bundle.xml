@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Release bundle: everything an Identity Server needs, plus install.sh and INSTALL.md.
+     Built by `mvn package` as target/nam-passkey-auth-<version>-bundle.zip (and .tar.gz).
+     Lists each file explicitly, so nothing from reference/ or e2e/ can end up in it. -->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+    <id>bundle</id>
+    <formats>
+        <format>zip</format>
+        <format>tar.gz</format>
+    </formats>
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>${project.artifactId}-${project.version}</baseDirectory>
+
+    <files>
+        <!-- The shaded jar, under the name it has on the server -->
+        <file>
+            <source>${project.build.directory}/${project.build.finalName}.jar</source>
+            <outputDirectory>lib</outputDirectory>
+            <destName>nam-passkey-auth.jar</destName>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>scripts/install.sh</source>
+            <outputDirectory>.</outputDirectory>
+            <fileMode>0755</fileMode>
+            <lineEnding>unix</lineEnding>
+        </file>
+        <file>
+            <source>INSTALL.md</source>
+            <outputDirectory>.</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>src/assembly/VERSION</source>
+            <outputDirectory>.</outputDirectory>
+            <filtered>true</filtered>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>LICENSE</source>
+            <outputDirectory>.</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+        <file>
+            <source>src/main/resources/META-INF/THIRD-PARTY-NOTICES.txt</source>
+            <outputDirectory>.</outputDirectory>
+            <fileMode>0644</fileMode>
+        </file>
+    </files>
+
+    <fileSets>
+        <fileSet>
+            <directory>src/main/webapp/jsp</directory>
+            <outputDirectory>jsp</outputDirectory>
+            <includes>
+                <include>passkey_*.jsp</include>
+                <include>passkey_*.jspf</include>
+            </includes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>schema</directory>
+            <outputDirectory>schema</outputDirectory>
+            <includes>
+                <include>*.ldif</include>
+            </includes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+    </fileSets>
+</assembly>

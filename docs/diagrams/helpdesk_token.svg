@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1694" height="1369" viewBox="0 0 1694 1369">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<path d="M900 856 L1567 856 L1567 968 L900 968 Z" fill="#7f7f7f" fill-opacity="0.05" stroke="#5a5a5a" stroke-width="1" stroke-linejoin="round" data-tag="frame:2"/>
+<path d="M25 409 L1668.5 409 L1668.5 1256 L25 1256 Z" fill="#7f7f7f" fill-opacity="0.05" stroke="#5a5a5a" stroke-width="1" stroke-linejoin="round" data-tag="frame:1"/>
+<path d="M126 133 L126 1276" fill="none" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<path d="M385 133 L385 1276" fill="none" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<path d="M670 133 L670 1276" fill="none" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<path d="M934 133 L934 1276" fill="none" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<path d="M1210 133 L1210 1276" fill="none" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<path d="M1342 133 L1342 1276" fill="none" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<path d="M1533 133 L1533 1276" fill="none" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 4"/>
+<path d="M929 339 L939 339 L939 1268 L929 1268 Z" fill="#ffffff" stroke="#636363" stroke-width="1" stroke-linejoin="round"/>
+<path d="M900 856 L943 856 L943 868 L935 876 L900 876 Z" fill="#ffffff" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold"><tspan x="918.5" y="870.54">opt</tspan></text>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#000000" font-weight="bold"><tspan x="951" y="871.54">[NOTIFY_EMAIL=true]</tspan></text>
+<path d="M25 409 L63 409 L63 421 L55 429 L25 429 Z" fill="#ffffff" stroke="#8a8a8a" stroke-width="1" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#000000" font-weight="bold"><tspan x="41" y="423.54">alt</tspan></text>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#000000" font-weight="bold"><tspan x="71" y="424.54">[not in HELPDESK_GROUP_DN or HELPDESK_ALLOWED_DNS]</tspan></text>
+<path d="M25 476 L1668.5 476" fill="none" stroke="#5a5a5a" stroke-width="1" stroke-linejoin="round" stroke-dasharray="5 3"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" text-anchor="start" fill="#000000" font-weight="bold"><tspan x="35" y="492.54">[allowed]</tspan></text>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:1"><tspan x="829.5" y="166.41">asks for help, by phone or in person</tspan></text>
+<path d="M1533 174 L126 174" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:1"/>
+<path d="M126 174 L135 169.95 L135 178.05 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:2"><tspan x="527.5" y="203.41">helpdesk contract: Name/Password, then</tspan><tspan x="527.5" y="220.41">the passkey method</tspan></text>
+<path d="M385 228 L670 228" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:2"/>
+<path d="M670 228 L661 232.05 L661 223.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:3"><tspan x="255.5" y="257.41">agent's ID and password</tspan></text>
+<path d="M126 265 L385 265" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:3"/>
+<path d="M385 265 L376 269.05 L376 260.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:4"><tspan x="940" y="294.41">bind as the agent</tspan></text>
+<path d="M670 302 L1210 302" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:4"/>
+<path d="M1210 302 L1201 306.05 L1201 297.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:5"><tspan x="802" y="331.41">run the passkey method for the agent</tspan></text>
+<path d="M670 339 L934 339" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:5"/>
+<path d="M934 339 L925 343.05 L925 334.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:6"><tspan x="1074.5" y="368.41">read the agent's group membership (on</tspan><tspan x="1074.5" y="385.41">every request)</tspan></text>
+<path d="M939 393 L1210 393" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:6"/>
+<path d="M1210 393 L1201 397.05 L1201 388.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:7"><tspan x="657" y="452.41">refused</tspan></text>
+<path d="M929 460 L385 460" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" stroke-dasharray="6 4" data-tag="message:7"/>
+<path d="M385 460 L394 455.95 L394 464.05 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:8"><tspan x="657" y="515.41">confirm with your own passkey</tspan></text>
+<path d="M929 523 L385 523" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" stroke-dasharray="6 4" data-tag="message:8"/>
+<path d="M385 523 L394 518.95 L394 527.05 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:9"><tspan x="255.5" y="552.41">passkey with user verification</tspan></text>
+<path d="M126 560 L385 560" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:9"/>
+<path d="M385 560 L376 564.05 L376 555.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:10"><tspan x="657" y="589.41">signed assertion</tspan></text>
+<path d="M385 597 L929 597" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:10"/>
+<path d="M929 597 L920 601.05 L920 592.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:11"><tspan x="255.5" y="670.41">ticks every identity check, enters the</tspan><tspan x="255.5" y="687.41">user's ID</tspan></text>
+<path d="M126 695 L385 695" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:11"/>
+<path d="M385 695 L376 699.05 L376 690.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:12"><tspan x="657" y="724.41">issue a token</tspan></text>
+<path d="M385 732 L929 732" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:12"/>
+<path d="M929 732 L920 736.05 L920 727.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:13"><tspan x="1074.5" y="761.41">find the user (never the agent's own</tspan><tspan x="1074.5" y="778.41">account)</tspan></text>
+<path d="M939 786 L1210 786" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:13"/>
+<path d="M1210 786 L1201 790.05 L1201 781.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:14"><tspan x="1074.5" y="815.41">store the token's HMAC and expiry</tspan><tspan x="1074.5" y="832.41">(ENROLL_TOKEN_TTL_SEC)</tspan></text>
+<path d="M939 840 L1210 840" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:14"/>
+<path d="M1210 840 L1201 844.05 L1201 835.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:15"><tspan x="1140.5" y="899.41">a helpdesk code was issued (no code)</tspan></text>
+<path d="M939 907 L1342 907" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:15"/>
+<path d="M1333 911.05 L1342 907" fill="none" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:16"><tspan x="1437.5" y="936.41">notification</tspan></text>
+<path d="M1342 944 L1533 944" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:16"/>
+<path d="M1524 948.05 L1533 944" fill="none" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:17"><tspan x="657" y="993.41">the token, shown once</tspan></text>
+<path d="M929 1001 L385 1001" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" stroke-dasharray="6 4" data-tag="message:17"/>
+<path d="M385 1001 L394 996.95 L394 1005.05 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:18"><tspan x="829.5" y="1030.41">reads out the token</tspan></text>
+<path d="M126 1038 L1533 1038" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:18"/>
+<path d="M1533 1038 L1524 1042.05 L1524 1033.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:19"><tspan x="255.5" y="1187.41">Done</tspan></text>
+<path d="M126 1195 L385 1195" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" data-tag="message:19"/>
+<path d="M385 1195 L376 1199.05 L376 1190.95 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="message:20"><tspan x="799.5" y="1224.41">authenticated</tspan></text>
+<path d="M929 1232 L670 1232" fill="none" stroke="#6e6e6e" stroke-width="1.2" stroke-linejoin="round" stroke-dasharray="6 4" data-tag="message:20"/>
+<path d="M670 1232 L679 1227.95 L679 1236.05 Z" fill="#3a3a3a" stroke="#3a3a3a" stroke-width="1.2" stroke-linejoin="round"/>
+<path d="M35 615 L209 615 L217 623 L217 645 L35 645 Z" fill="#ffe2c6" stroke="#b08a68" stroke-width="1" stroke-linejoin="round" data-tag="note:1"/>
+<path d="M209 615 L209 623 L217 623" fill="none" stroke="#b08a68" stroke-width="1" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" text-anchor="start" fill="#000000" data-tag="note:1"><tspan x="47" y="634.72">verifies the caller's identity</tspan></text>
+<path d="M1407.5 1056 L1650.5 1056 L1658.5 1064 L1658.5 1102 L1407.5 1102 Z" fill="#ffe2c6" stroke="#b08a68" stroke-width="1" stroke-linejoin="round" data-tag="note:2"/>
+<path d="M1650.5 1056 L1650.5 1064 L1658.5 1064" fill="none" stroke="#b08a68" stroke-width="1" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" text-anchor="start" fill="#000000" data-tag="note:2"><tspan x="1419.5" y="1075.72">uses it once, on the recovery page</tspan><tspan x="1419.5" y="1091.72">or as the first-passkey helpdesk check</tspan></text>
+<path d="M96 1116 L1563 1116 L1563 1162 L96 1162 Z" fill="#ffffff" stroke="#5a5a5a" stroke-width="1" stroke-linejoin="round" data-tag="ref:1"/>
+<path d="M96 1116 L132 1116 L132 1124 L124 1132 L96 1132 Z" fill="#ffffff" stroke="#5a5a5a" stroke-width="1" stroke-linejoin="round"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#000000" font-weight="bold"><tspan x="114" y="1128.16">ref</tspan></text>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" text-anchor="middle" fill="#000000" data-tag="ref:1"><tspan x="829.5" y="1150.72">Account recovery</tspan></text>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" text-anchor="middle" fill="#000000" font-weight="bold" data-tag="ref:1"><tspan x="1553" y="1129.16">↗</tspan></text>
+<path d="M130.48 78.48 C130.48 80.95 128.47 82.96 126 82.96 C123.53 82.96 121.52 80.95 121.52 78.48 C121.52 76.01 123.53 74 126 74 C128.47 74 130.48 76.01 130.48 78.48 Z M126 82.96 L126 96.32 M111.6 86.97 L140.4 86.97 M126 96.32 L114.48 110 M126 96.32 L137.52 110" fill="none" stroke="#979797" stroke-width="1.5" stroke-linejoin="round" data-tag="participant:agent"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:agent"><tspan x="126" y="129.41">Helpdesk agent</tspan></text>
+<path d="M325.5 98 L444.5 98 C446.71 98 448.5 99.79 448.5 102 L448.5 129 C448.5 131.21 446.71 133 444.5 133 L325.5 133 C323.29 133 321.5 131.21 321.5 129 L321.5 102 C321.5 99.79 323.29 98 325.5 98 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:agentBrowser"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:agentBrowser"><tspan x="385" y="120.41">Agent's browser</tspan></text>
+<path d="M599 98 L741 98 C743.21 98 745 99.79 745 102 L745 129 C745 131.21 743.21 133 741 133 L599 133 C596.79 133 595 131.21 595 129 L595 102 C595 99.79 596.79 98 599 98 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:idp"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:idp"><tspan x="670" y="120.41">NAM Identity Server</tspan></text>
+<path d="M874 98 L994 98 C996.21 98 998 99.79 998 102 L998 129 C998 131.21 996.21 133 994 133 L874 133 C871.79 133 870 131.21 870 129 L870 102 C870 99.79 871.79 98 874 98 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:pk"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:pk"><tspan x="934" y="120.41">Passkey method</tspan></text>
+<path d="M1159.5 75 C1159.5 69.48 1182.11 65 1210 65 C1237.89 65 1260.5 69.48 1260.5 75 L1260.5 123 C1260.5 128.52 1237.89 133 1210 133 C1182.11 133 1159.5 128.52 1159.5 123 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:dir"/>
+<path d="M1159.5 75 C1159.5 80.52 1182.11 85 1210 85 C1237.89 85 1260.5 80.52 1260.5 75" fill="none" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:dir"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:dir"><tspan x="1210" y="100.41">User store</tspan><tspan x="1210" y="117.41">(eDirectory)</tspan></text>
+<path d="M1298.5 98 L1385.5 98 C1391.02 98 1395.5 105.83 1395.5 115.5 C1395.5 125.17 1391.02 133 1385.5 133 L1298.5 133 C1292.98 133 1288.5 125.17 1288.5 115.5 C1288.5 105.83 1292.98 98 1298.5 98 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:mail"/>
+<path d="M1385.5 98 C1379.98 98 1375.5 105.83 1375.5 115.5 C1375.5 125.17 1379.98 133 1385.5 133" fill="none" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:mail"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:mail"><tspan x="1338" y="120.41">Mail server</tspan></text>
+<path d="M1537.48 78.48 C1537.48 80.95 1535.47 82.96 1533 82.96 C1530.53 82.96 1528.52 80.95 1528.52 78.48 C1528.52 76.01 1530.53 74 1533 74 C1535.47 74 1537.48 76.01 1537.48 78.48 Z M1533 82.96 L1533 96.32 M1518.6 86.97 L1547.4 86.97 M1533 96.32 L1521.48 110 M1533 96.32 L1544.52 110" fill="none" stroke="#979797" stroke-width="1.5" stroke-linejoin="round" data-tag="participant:user"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:user"><tspan x="1533" y="129.41">User</tspan></text>
+<path d="M130.48 1280.48 C130.48 1282.95 128.47 1284.96 126 1284.96 C123.53 1284.96 121.52 1282.95 121.52 1280.48 C121.52 1278.01 123.53 1276 126 1276 C128.47 1276 130.48 1278.01 130.48 1280.48 Z M126 1284.96 L126 1298.32 M111.6 1288.97 L140.4 1288.97 M126 1298.32 L114.48 1312 M126 1298.32 L137.52 1312" fill="none" stroke="#979797" stroke-width="1.5" stroke-linejoin="round" data-tag="participant:agent"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:agent"><tspan x="126" y="1331.41">Helpdesk agent</tspan></text>
+<path d="M325.5 1276 L444.5 1276 C446.71 1276 448.5 1277.79 448.5 1280 L448.5 1307 C448.5 1309.21 446.71 1311 444.5 1311 L325.5 1311 C323.29 1311 321.5 1309.21 321.5 1307 L321.5 1280 C321.5 1277.79 323.29 1276 325.5 1276 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:agentBrowser"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:agentBrowser"><tspan x="385" y="1298.41">Agent's browser</tspan></text>
+<path d="M599 1276 L741 1276 C743.21 1276 745 1277.79 745 1280 L745 1307 C745 1309.21 743.21 1311 741 1311 L599 1311 C596.79 1311 595 1309.21 595 1307 L595 1280 C595 1277.79 596.79 1276 599 1276 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:idp"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:idp"><tspan x="670" y="1298.41">NAM Identity Server</tspan></text>
+<path d="M874 1276 L994 1276 C996.21 1276 998 1277.79 998 1280 L998 1307 C998 1309.21 996.21 1311 994 1311 L874 1311 C871.79 1311 870 1309.21 870 1307 L870 1280 C870 1277.79 871.79 1276 874 1276 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:pk"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:pk"><tspan x="934" y="1298.41">Passkey method</tspan></text>
+<path d="M1159.5 1286 C1159.5 1280.48 1182.11 1276 1210 1276 C1237.89 1276 1260.5 1280.48 1260.5 1286 L1260.5 1334 C1260.5 1339.52 1237.89 1344 1210 1344 C1182.11 1344 1159.5 1339.52 1159.5 1334 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:dir"/>
+<path d="M1159.5 1286 C1159.5 1291.52 1182.11 1296 1210 1296 C1237.89 1296 1260.5 1291.52 1260.5 1286" fill="none" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:dir"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:dir"><tspan x="1210" y="1311.41">User store</tspan><tspan x="1210" y="1328.41">(eDirectory)</tspan></text>
+<path d="M1298.5 1276 L1385.5 1276 C1391.02 1276 1395.5 1283.83 1395.5 1293.5 C1395.5 1303.17 1391.02 1311 1385.5 1311 L1298.5 1311 C1292.98 1311 1288.5 1303.17 1288.5 1293.5 C1288.5 1283.83 1292.98 1276 1298.5 1276 Z" fill="#e4e4e4" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:mail"/>
+<path d="M1385.5 1276 C1379.98 1276 1375.5 1283.83 1375.5 1293.5 C1375.5 1303.17 1379.98 1311 1385.5 1311" fill="none" stroke="#979797" stroke-width="1" stroke-linejoin="round" data-tag="participant:mail"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:mail"><tspan x="1338" y="1298.41">Mail server</tspan></text>
+<path d="M1537.48 1280.48 C1537.48 1282.95 1535.47 1284.96 1533 1284.96 C1530.53 1284.96 1528.52 1282.95 1528.52 1280.48 C1528.52 1278.01 1530.53 1276 1533 1276 C1535.47 1276 1537.48 1278.01 1537.48 1280.48 Z M1533 1284.96 L1533 1298.32 M1518.6 1288.97 L1547.4 1288.97 M1533 1298.32 L1521.48 1312 M1533 1298.32 L1544.52 1312" fill="none" stroke="#979797" stroke-width="1.5" stroke-linejoin="round" data-tag="participant:user"/>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#000000" data-tag="participant:user"><tspan x="1533" y="1331.41">User</tspan></text>
+<text font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" text-anchor="middle" fill="#000000" font-weight="bold" data-tag="title"><tspan x="846.75" y="41.42">Helpdesk token (MODE=HELPDESK)</tspan></text>
+</svg>

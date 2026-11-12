@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.pointbluetech.nam</groupId>
+    <artifactId>nam-passkey-auth</artifactId>
+    <version>0.1.0-beta.1</version>
+    <packaging>jar</packaging>
+
+    <name>NAM Passkey Authentication</name>
+    <description>WebAuthn / passkey authentication class for OpenText Access Manager Identity Server</description>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- nidp.jar 5.1.3 is Java 11 bytecode; the IDP JVM must be 11 or newer -->
+        <maven.compiler.release>11</maven.compiler.release>
+
+        <!-- NAM jars from reference/, installed by scripts/install-nam-jars.sh -->
+        <nam.version>5.1.3</nam.version>
+
+        <webauthn.version>2.10.1</webauthn.version>
+        <!-- Yubico declares version ranges; pin them so builds are reproducible.
+             Everything below is shaded and relocated, so it never meets the IDP's own copies. -->
+        <jackson.version>2.22.4</jackson.version>
+        <guava.version>33.7.2-jre</guava.version>
+        <cbor.version>4.5.6</cbor.version>
+        <httpclient5.version>5.6.5</httpclient5.version>
+        <!-- 1.7.x so our StaticLoggerBinder (src/main/java/org/slf4j/impl) is the binding -->
+        <slf4j.version>1.7.36</slf4j.version>
+
+        <junit.version>5.11.4</junit.version>
+        <shaded.prefix>com.pointbluetech.shaded</shaded.prefix>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.upokecenter</groupId>
+                <artifactId>cbor</artifactId>
+                <version>${cbor.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.client5</groupId>
+                <artifactId>httpclient5</artifactId>
+                <version>${httpclient5.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Provided by the Identity Server webapp at runtime -->
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>nidp</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>NAMCommon</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>jcc</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- NAM's NMAS client and JLDAP, for checking NMAS security answers (QUESTIONS_STORE=nmas) -->
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>nmasclient</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>ldap</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- NAM's email client (Admin Console > Email configuration), used for notifications.
+             Only NamMailSender touches these, so the class still loads if a NAM version lacks them. -->
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>nam-email-client-core</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>nam-email-client-config-nidp</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>nam-email-client-config-xsd</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.novell.nam</groupId>
+            <artifactId>mail</artifactId>
+            <version>${nam.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Tomcat 9 -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>4.0.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Shaded into the jar -->
+        <dependency>
+            <groupId>com.yubico</groupId>
+            <artifactId>webauthn-server-core</artifactId>
+            <version>${webauthn.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- BCRYPT and SCRYPT challenge answers: NAM ships bcprov (1.57) in the IDP, so it isn't bundled -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.80</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Tests only: SSPR's own library (LGPL), to check our answer checks against it; never shipped -->
+        <dependency>
+            <groupId>com.github.ldapchai</groupId>
+            <artifactId>ldapchai</artifactId>
+            <version>0.8.7</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <!-- ldapchai logs through log4j 1 -->
+            <groupId>ch.qos.reload4j</groupId>
+            <artifactId>reload4j</artifactId>
+            <version>1.2.26</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Tests only: makes attestation certificates for the software authenticator -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.80</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com.yubico</pattern>
+                                    <shadedPattern>${shaded.prefix}.yubico</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.fasterxml.jackson</pattern>
+                                    <shadedPattern>${shaded.prefix}.jackson</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.google</pattern>
+                                    <shadedPattern>${shaded.prefix}.google</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.upokecenter</pattern>
+                                    <shadedPattern>${shaded.prefix}.upokecenter</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.github.peteroupc</pattern>
+                                    <shadedPattern>${shaded.prefix}.peteroupc</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.hc</pattern>
+                                    <shadedPattern>${shaded.prefix}.apache.hc</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.jspecify</pattern>
+                                    <shadedPattern>${shaded.prefix}.jspecify</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <!-- Includes our org.slf4j.impl binding, so the relocated
+                                         LoggerFactory binds to it and never to the IDP's slf4j-simple -->
+                                    <pattern>org.slf4j</pattern>
+                                    <shadedPattern>${shaded.prefix}.slf4j</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/**</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/maven/**</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                                    <addHeader>false</addHeader>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Multi-Release>false</Multi-Release>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- After shade (same phase, declared later): the release bundle for Identity Server
+                 nodes, target/nam-passkey-auth-<version>-bundle.zip. See INSTALL.md. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <executions>
+                    <execution>
+                        <id>release-bundle</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>src/assembly/bundle.xml</descriptor>
+                            </descriptors>
+                            <tarLongFileMode>posix</tarLongFileMode>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

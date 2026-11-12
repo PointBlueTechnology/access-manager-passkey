@@ -1,0 +1,33 @@
+nam-passkey-auth bundles (shaded and relocated under com.pointbluetech.shaded) the following
+third-party software. Their license and notice files are also merged into META-INF/ in the jar.
+
+Yubico java-webauthn-server (webauthn-server-core, yubico-util) 2.10.1
+  BSD 2-Clause, Copyright (c) 2014-2018, Yubico AB
+  Portions BSD 3-Clause, Copyright (c) 2014, Google Inc.
+  https://github.com/Yubico/java-webauthn-server
+
+Jackson (core, annotations, databind, dataformat-cbor, datatype-jdk8, datatype-jsr310) 2.22.x
+  Apache License 2.0 - https://github.com/FasterXML/jackson
+
+Guava 33.7.2-jre, failureaccess, error_prone_annotations, j2objc-annotations
+  Apache License 2.0 - https://github.com/google/guava
+
+JSpecify 1.0.1
+  Apache License 2.0 - https://jspecify.dev
+
+CBOR (com.upokecenter:cbor 4.5.6) (Peter O.)
+  The Unlicense (public domain) - https://github.com/peteroupc/CBOR-Java
+
+Numbers 1.8.2, DataUtilities 1.1.0 (Peter O.)
+  CC0 1.0 Universal (public domain dedication)
+
+Apache HttpComponents Client 5.6.5 / Core 5.4.4
+  Apache License 2.0 - https://hc.apache.org
+
+SLF4J API 1.7.36
+  MIT License, Copyright (c) 2004-2022 QOS.ch - https://www.slf4j.org
+
+Passkey provider names (com/pointbluetech/nam/login/passkey/aaguid-names.properties)
+  AAGUID to provider-name pairs, names only, taken from the community list at
+  https://github.com/passkeydeveloper/passkey-authenticator-aaguids
+  That repository declares no license. Used for display only; delete the file to turn this off.

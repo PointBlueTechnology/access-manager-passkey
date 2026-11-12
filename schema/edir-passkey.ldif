@@ -1,0 +1,43 @@
+# eDirectory schema extension for the NAM passkey authentication class.
+#
+# eDirectory doesn't need OIDs: each definition uses the <name>-oid form, and eDirectory keeps
+# it that way.
+#
+# Apply as an admin with schema rights, e.g.:
+#   ldapmodify -H ldaps://edir.example.com -D cn=admin,o=system -W -f edir-passkey.ldif
+#
+# Attributes (see docs/DESIGN.md, Storage):
+#   pbtPasskeyCredential   one value per passkey: "v1:" + JSON (credential id, COSE public key, ...)
+#   pbtPasskeyRecovery     one value per unused recovery code: "v1:" + HMAC-SHA256
+#   pbtPasskeyEnrollToken  helpdesk one-time token: "v1:" + HMAC-SHA256 + ":" + expiry
+#
+# caseExactMatch makes eDirectory use Case Exact String: base64url values differ only by case.
+
+dn: cn=schema
+changetype: modify
+add: attributeTypes
+attributeTypes: ( pbtpasskeycredential-oid NAME 'pbtPasskeyCredential'
+  DESC 'WebAuthn passkey registered for NAM sign-in'
+  EQUALITY caseExactMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{4096} )
+-
+add: attributeTypes
+attributeTypes: ( pbtpasskeyrecovery-oid NAME 'pbtPasskeyRecovery'
+  DESC 'Hashed single-use passkey recovery code'
+  EQUALITY caseExactMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{256} )
+-
+add: attributeTypes
+attributeTypes: ( pbtpasskeyenrolltoken-oid NAME 'pbtPasskeyEnrollToken'
+  DESC 'Hashed helpdesk passkey enrollment token with expiry'
+  EQUALITY caseExactMatch
+  SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{256}
+  SINGLE-VALUE )
+
+dn: cn=schema
+changetype: modify
+add: objectClasses
+objectClasses: ( pbtpasskeyuser-oid NAME 'pbtPasskeyUser'
+  DESC 'Auxiliary class holding NAM passkey data'
+  SUP top AUXILIARY
+  MAY ( pbtPasskeyCredential $ pbtPasskeyRecovery $ pbtPasskeyEnrollToken ) )
