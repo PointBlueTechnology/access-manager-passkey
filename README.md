@@ -194,7 +194,7 @@ By default a user who has no passkey can create one right after the earlier meth
 |---|---|---|
 | Password only (default) | Nothing extra | A stolen password is enough to enroll |
 | [Automatic upgrade](#automatic-passkey-upgrade) (`MODE=UPGRADE`) | Nothing at all: the browser creates the passkey after a saved password | As password only, and the user may not notice |
-| An existing MFA method first | Put TOTP, email OTP or Advanced Authentication before the passkey method in the contract | Strongest, if users already have that factor |
+| An existing MFA method first | Put an X.509 certificate, TOTP, email OTP or Advanced Authentication before the passkey method in the contract. For certificates, see the [YubiKey cookbook](docs/cookbooks/yubikey-only.md) | Strongest, if users already have that factor |
 | `ENROLL_GATES=email` | A six-digit code is emailed to the user's `NOTIFY_MAIL_ATTRIBUTE` address through NAM's Email configuration. It works once, for 10 minutes; up to 5 can be sent per sign-in | Only as strong as the user's mailbox; needs a working mail setup and an address on each account |
 | `ENROLL_GATES=helpdesk` | A helpdesk agent issues a code from the `HELPDESK` contract, as for recovery. Needs `RECOVERY_PEPPER` on the class | Strong, but every user needs a helpdesk call |
 | `ENROLL_GATES=questions` | The user answers their existing security questions, from SSPR or NMAS: every required one, plus the number of random ones their set asks for (at least one) | Weak: answers are often guessable or public, and NIST SP 800-63B no longer accepts them. Only for sites already relying on SSPR |
