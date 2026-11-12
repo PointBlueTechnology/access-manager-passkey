@@ -82,64 +82,6 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Provided by the Identity Server webapp at runtime -->
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>nidp</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>NAMCommon</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>jcc</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <!-- NAM's NMAS client and JLDAP, for checking NMAS security answers (QUESTIONS_STORE=nmas) -->
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>nmasclient</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>ldap</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <!-- NAM's email client (Admin Console > Email configuration), used for notifications.
-             Only NamMailSender touches these, so the class still loads if a NAM version lacks them. -->
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>nam-email-client-core</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>nam-email-client-config-nidp</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>nam-email-client-config-xsd</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.novell.nam</groupId>
-            <artifactId>mail</artifactId>
-            <version>${nam.version}</version>
-            <scope>provided</scope>
-        </dependency>
         <!-- Tomcat 9 -->
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -323,4 +265,96 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <!-- The Identity Server's jars, from reference/ through scripts/install-nam-jars.sh. On unless
+             another profile is chosen. They're OpenText's and can't be published, so CI goes without. -->
+        <profile>
+            <id>nam</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <!-- Provided by the Identity Server webapp at runtime -->
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>nidp</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>NAMCommon</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>jcc</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <!-- NAM's NMAS client and JLDAP, for checking NMAS security answers (QUESTIONS_STORE=nmas) -->
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>nmasclient</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>ldap</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <!-- NAM's email client (Admin Console > Email configuration), used for notifications.
+                     Only NamMailSender touches these, so the class still loads if a NAM version lacks them. -->
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>nam-email-client-core</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>nam-email-client-config-nidp</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>nam-email-client-config-xsd</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.novell.nam</groupId>
+                    <artifactId>mail</artifactId>
+                    <version>${nam.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- mvn -P ci test: compiles and tests everything that doesn't call Access Manager's API. Only
+             these classes do; nothing else refers to them except by name. Never package with it. -->
+        <profile>
+            <id>ci</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>com/pointbluetech/nam/login/passkey/PasskeyAuthClass.java</exclude>
+                                <exclude>com/pointbluetech/nam/login/passkey/NamUserAttributes.java</exclude>
+                                <exclude>com/pointbluetech/nam/login/passkey/NamMailSender.java</exclude>
+                                <exclude>com/pointbluetech/nam/login/passkey/NmasLogin.java</exclude>
+                                <exclude>com/pointbluetech/nam/login/passkey/logging/NidpAppLogSink.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

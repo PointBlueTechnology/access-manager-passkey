@@ -86,6 +86,14 @@ class CeremonyStateTest {
     }
 
     @Test
+    void aProofCanBeForgottenByAnyMethod() {
+        state("u1", T0).markVerified();
+        new CeremonyState(session, "helpdesk-card", "u1", 300, Clock.fixed(T0, ZoneOffset.UTC)).forgetVerified();
+
+        assertFalse(state("u1", T0).verifiedWithin(300));
+    }
+
+    @Test
     void actionTokenIsStableAndChecked() {
         CeremonyState state = state("u1", T0);
         assertFalse(state.checkActionToken("anything"), "no token issued yet");

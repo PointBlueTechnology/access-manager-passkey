@@ -9,9 +9,10 @@ import { type Kind, Session } from '../lib/nam';
  * authenticators stand in for the password manager: Chrome deletes a credential from them when a page
  * says the site no longer has it, so the tests check what the browser actually did.
  *
- * Like a real one, an authenticator keeps one passkey per account per site, so creating a second one
- * replaces the first. Where a test needs both, the account's own passkey goes on a second, USB,
- * authenticator in the same browser.
+ * Like a real one, an authenticator keeps one passkey per account per site, and the server lists the
+ * account's passkeys when a new one is made, so the browser won't make a second one beside the first.
+ * The account's own passkey is saved and taken out first; where a test needs both, it goes on a
+ * second, USB, authenticator in the same browser.
  *
  * Skipped when the class has the setting off, which shows as a manage page with no signals.
  */
@@ -49,9 +50,12 @@ async function keepPasskey(session: Session): Promise<StoredCredential> {
     return current;
 }
 
-/** Adds a passkey on the manage page and returns it as the browser holds it. */
+/** Adds a passkey on the manage page and returns it; the browser held the account's own, now saved, before. */
 async function addPasskey(session: Session, name: string): Promise<StoredCredential> {
-    const before = new Set((await session.authenticator.credentials()).map(c => c.credentialId));
+    for (const held of await session.authenticator.credentials()) {
+        await session.authenticator.remove(held.credentialId);
+    }
+    const before = new Set<string>();
     await session.click('#pk_add');
     expect(await session.driveTo(['manage'], { passkeyName: name })).toBe('manage');
     const added = (await session.authenticator.credentials()).filter(c => !before.has(c.credentialId));

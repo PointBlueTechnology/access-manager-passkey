@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class AccountRestrictionsTest {
@@ -14,13 +16,27 @@ class AccountRestrictionsTest {
     private static final Instant NOW = Instant.parse("2026-11-10T16:17:10Z");
 
     private final InMemoryAttributes directory = new InMemoryAttributes();
+    /** Attributes the proxy account isn't allowed to read; eDirectory leaves them out of a read. */
+    private final Set<String> hidden = new HashSet<>();
+    private boolean rightsUnknown;
+
+    private boolean canRead(String attribute) {
+        if (rightsUnknown) {
+            throw new PasskeyStoreException("Get Effective Privileges failed");
+        }
+        return !hidden.contains(attribute);
+    }
 
     private void set(String attribute, String value) {
         directory.values.put(attribute, new ArrayList<>(List.of(value)));
     }
 
     private Optional<String> refusal() {
-        return AccountRestrictions.refusal(directory, NOW);
+        // As eDirectory does: an attribute the proxy can't read comes back with no values
+        for (String attribute : hidden) {
+            directory.values.remove(attribute);
+        }
+        return AccountRestrictions.refusal(directory, this::canRead, NOW);
     }
 
     @Test
@@ -78,6 +94,26 @@ class AccountRestrictionsTest {
 
         directory.values.clear();
         set(AccountRestrictions.EXPIRATION_TIME, "next tuesday");
+        assertThrows(PasskeyStoreException.class, this::refusal);
+    }
+
+    @Test
+    void attributesWithNoValueDoNotRestrictTheAccount() {
+        assertEquals(Optional.empty(), refusal());
+    }
+
+    @Test
+    void anAttributeTheProxyCannotReadRefusesEvenThoughItLooksUnset() {
+        for (String attribute : AccountRestrictions.EDIRECTORY_ATTRIBUTES) {
+            hidden.clear();
+            hidden.add(attribute);
+            assertEquals(Optional.of("the user store's proxy account can't read " + attribute), refusal(), attribute);
+        }
+    }
+
+    @Test
+    void rightsThatCannotBeCheckedRefuse() {
+        rightsUnknown = true;
         assertThrows(PasskeyStoreException.class, this::refusal);
     }
 

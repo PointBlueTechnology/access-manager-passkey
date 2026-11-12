@@ -25,9 +25,11 @@ import javax.crypto.spec.SecretKeySpec;
  * Yubico's view of every user's passkeys, for sign-in before the user is known. The library's
  * "username" is the user's GUID, as in {@link LdapCredentialRepository}.
  *
- * It also answers for decoy usernames: an ID with no passkeys gets a made-up credential ID that stays
+ * It also answers for decoy usernames: an ID with no passkeys gets a made-up credential that stays
  * the same for that ID, so the login page can't be used to find out which accounts exist or have
- * passkeys. The browser reports that nothing matched, exactly as if the user had cancelled.
+ * passkeys. The browser reports that nothing matched, exactly as if the user had cancelled. Each
+ * decoy takes the length and transports of one of a few common kinds of passkey, chosen by the ID,
+ * so it doesn't stand out by shape. A real user with several passkeys still lists that many.
  */
 final class LoginCredentialRepository implements CredentialRepository {
 
@@ -41,8 +43,36 @@ final class LoginCredentialRepository implements CredentialRepository {
 
     private final UserDirectory directory;
     private final byte[] decoyKey;
+    /**
+     * Common shapes of real passkeys: credential ID length in bytes, and transports. A decoy takes one,
+     * weighted by how often it's listed here, so its length and transports are like a real one's.
+     */
+    private static final DecoyShape[] DECOY_SHAPES = {
+        new DecoyShape(16, AuthenticatorTransport.HYBRID, AuthenticatorTransport.INTERNAL),
+        new DecoyShape(16, AuthenticatorTransport.HYBRID, AuthenticatorTransport.INTERNAL),
+        new DecoyShape(20, AuthenticatorTransport.HYBRID, AuthenticatorTransport.INTERNAL),
+        new DecoyShape(20, AuthenticatorTransport.HYBRID, AuthenticatorTransport.INTERNAL),
+        new DecoyShape(32, AuthenticatorTransport.HYBRID, AuthenticatorTransport.INTERNAL),
+        new DecoyShape(32, AuthenticatorTransport.INTERNAL),
+        new DecoyShape(48, AuthenticatorTransport.NFC, AuthenticatorTransport.USB),
+        new DecoyShape(64, AuthenticatorTransport.NFC, AuthenticatorTransport.USB),
+    };
+
+    private static final class DecoyShape {
+        final int length;
+        final Set<AuthenticatorTransport> transports;
+
+        DecoyShape(int length, AuthenticatorTransport... transports) {
+            this.length = length;
+            // Sorted, as a real passkey's are
+            this.transports = Collections.unmodifiableSet(new TreeSet<>(java.util.Arrays.asList(transports)));
+        }
+    }
+
     /** One lookup per user per request; the library asks several times during a ceremony. */
     private final Map<String, Optional<UserDirectory.User>> users = new HashMap<>();
+    /** One read of each user's passkeys per request. */
+    private final Map<String, java.util.List<PasskeyRecord>> passkeys = new HashMap<>();
 
     LoginCredentialRepository(UserDirectory directory) {
         this(directory, Optional.empty(), "");
@@ -76,13 +106,26 @@ final class LoginCredentialRepository implements CredentialRepository {
         return users.computeIfAbsent(guid, directory::byGuid);
     }
 
+    /**
+     * Keeps a user already found by ID, so building their challenge doesn't search the directory
+     * again: that extra search would make a real user's answer slower than a decoy's.
+     */
+    void remember(UserDirectory.User user) {
+        users.put(user.account().guid(), Optional.of(user));
+    }
+
+    /** The user's passkeys, read once per request. */
+    java.util.List<PasskeyRecord> passkeys(UserDirectory.User user) {
+        return passkeys.computeIfAbsent(user.account().guid(), guid -> user.store().load());
+    }
+
     @Override
     public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
         if (username.startsWith(DECOY_PREFIX)) {
             return Collections.singleton(decoyDescriptor(username));
         }
         return user(username)
-                .map(found -> found.store().load().stream()
+                .map(found -> passkeys(found).stream()
                         .map(PasskeyRecord::toDescriptor)
                         .collect(Collectors.toCollection(LinkedHashSet::new)))
                 .orElseGet(LinkedHashSet::new);
@@ -104,7 +147,7 @@ final class LoginCredentialRepository implements CredentialRepository {
     @Override
     public Optional<RegisteredCredential> lookup(ByteArray credentialId, ByteArray userHandle) {
         String guid = new String(userHandle.getBytes(), StandardCharsets.UTF_8);
-        return user(guid).flatMap(found -> found.store().load().stream()
+        return user(guid).flatMap(found -> passkeys(found).stream()
                 .filter(record -> record.credentialId().equals(credentialId))
                 .map(PasskeyRecord::toRegisteredCredential)
                 .findFirst());
@@ -116,16 +159,31 @@ final class LoginCredentialRepository implements CredentialRepository {
         return Collections.emptySet();
     }
 
-    private PublicKeyCredentialDescriptor decoyDescriptor(String username) {
+    /**
+     * The same for an ID every time, on every node: its shape and its bytes both come from an HMAC of
+     * the ID, so asking again shows nothing new.
+     */
+    PublicKeyCredentialDescriptor decoyDescriptor(String username) {
+        byte[] seed = hmac("shape|" + username);
+        DecoyShape shape = DECOY_SHAPES[(seed[0] & 0xFF) % DECOY_SHAPES.length];
+        byte[] id = new byte[shape.length];
+        for (int filled = 0, block = 0; filled < id.length; block++) {
+            byte[] bytes = hmac("id|" + block + "|" + username);
+            int take = Math.min(bytes.length, id.length - filled);
+            System.arraycopy(bytes, 0, id, filled, take);
+            filled += take;
+        }
+        return PublicKeyCredentialDescriptor.builder()
+                .id(new ByteArray(id))
+                .transports(shape.transports)
+                .build();
+    }
+
+    private byte[] hmac(String input) {
         try {
             Mac mac = Mac.getInstance(HMAC);
             mac.init(new SecretKeySpec(decoyKey, HMAC));
-            Set<AuthenticatorTransport> transports = new TreeSet<>(
-                    java.util.Arrays.asList(AuthenticatorTransport.HYBRID, AuthenticatorTransport.INTERNAL));
-            return PublicKeyCredentialDescriptor.builder()
-                    .id(new ByteArray(mac.doFinal(username.getBytes(StandardCharsets.UTF_8))))
-                    .transports(transports)
-                    .build();
+            return mac.doFinal(input.getBytes(StandardCharsets.UTF_8));
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("HmacSHA256 is unavailable", e);
         }

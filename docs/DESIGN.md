@@ -29,7 +29,7 @@ WebAuthn itself (challenge generation, attestation and assertion verification, c
 | `CeremonyState` | per-sign-in state in NAM's session: pending challenges, gates passed, failures |
 | `PasskeyStore`, `PasskeyRecord` | reading and writing passkeys on the user's attribute |
 | `RecoveryStore` | recovery codes, helpdesk tokens and the recovery cool-down |
-| `AccountRestrictions` | eDirectory account checks for `LOGIN` mode, where no password bind happens |
+| `AccountRestrictions`, `EffectivePrivileges` | eDirectory account checks for `LOGIN` mode, where no password bind happens, and the proxy account's right to read what they check |
 | `SsprResponses`, `SsprCrypt` | checking answers stored in SSPR's formats |
 | `NmasChallengeProtocol`, `NmasCheck`, `NmasLogin` | checking answers stored in NMAS, through an NMAS login |
 | `PasswordManagerSignals` | what a page passes to the user's password manager through the WebAuthn Signals API |
@@ -44,7 +44,7 @@ Everything a sign-in needs between requests is kept in NAM's session, under keys
 
 - A WebAuthn request (challenge and options) is stored when a page is shown and removed when the response comes back, whatever the outcome. It's tied to the user's GUID and expires after `CHALLENGE_TTL_SEC`. A replayed or stale response finds nothing and fails.
 - Which first-passkey checks were passed, the hash of an emailed setup code, and the count of wrong entries, which `MAX_FAILED` limits for the sign-in.
-- A short-lived proof that the user verified a passkey, which unlocks the manage and helpdesk pages for `MANAGE_MAX_AUTH_AGE_SEC`.
+- A short-lived proof that the user verified a passkey, which unlocks the manage and helpdesk pages for `MANAGE_MAX_AUTH_AGE_SEC`. It serves only the method that made it: every passkey method forgets any proof when it starts and when it finishes. So a passkey sign-in, or a manage page left open, can't unlock a manage or helpdesk contract started afterwards in the same session, even though Access Manager asks only for the password again there.
 - For the manage and helpdesk pages, a per-page action token, so a cross-site form can't trigger an action.
 
 ## Storage
@@ -64,7 +64,7 @@ v1:{"id":"<credential ID, base64url>","pk":"<COSE public key, base64url>","sc":0
 - **User handle:** the UTF-8 bytes of the user's directory GUID, as NAM reports it. It's stable, carries no personal data, and lets `LOGIN` mode find the user directly by GUID.
 - **Counters:** the sign counter and last-used time are written only when the counter rises, or when the last-used time is older than `LAST_USED_WRITE_INTERVAL`. Synced passkeys always report 0, so this avoids a directory write on every sign-in. A non-zero counter that goes backwards is refused.
 - **Access:** the user store's proxy account needs read and write on the attribute, and the right to add the auxiliary class if `PASSKEY_AUX_CLASS` is set. Users must not be able to write it themselves, or they could plant keys through LDAP.
-- **Concurrency:** a read-modify-write race, such as two registrations at the same moment, is accepted.
+- **Concurrency:** every write is one LDAP modify that removes exactly the values that went and adds the new ones. eDirectory applies it whole or not at all, and refuses it if a value to remove is already gone or one to add already exists. So a recovery code or helpdesk token used by two requests at once works for only one of them, and a write never brings back a value someone else removed meanwhile, such as a used code in a shared attribute. Other writes start again from a fresh read when that happens. NAM's own modify calls replace the whole attribute, so for these writes the class borrows one admin connection from NAM's own pool, for the replica the session reads from, and hands it straight back; it keeps no connections and retries nothing, and a failed write fails the request. Requests that reach different replicas at the same moment are only as consistent as eDirectory's replication.
 
 ### Recovery codes and helpdesk tokens
 
@@ -87,11 +87,11 @@ The pepper lives in NAM's configuration store. Keeping that store separate from 
 `LOGIN` mode identifies the user itself, so it has more to check than the other modes:
 
 - **Lookup:** a passkey alone returns its user handle, and the class finds the user by GUID across the method's user stores. With an ID first, it looks the ID up and asks only for that user's passkeys.
-- **Unknown IDs:** an unknown ID, or one with no passkeys, gets a decoy credential, so the page doesn't reveal which accounts exist. The decoy is an HMAC of the ID, keyed from `RECOVERY_PEPPER`, so it's the same on every node and after a restart, as a real user's credentials would be. Without a pepper the key is per JVM, and the class warns at startup.
-- **Account state:** no password is checked, so the directory never refuses a bind. The class reads `loginDisabled`, the intruder lockout and `loginExpirationTime` itself, then runs NAM's login policy check, and refuses unless both pass. Anything it can't read refuses.
+- **Unknown IDs:** an unknown ID, or one with no passkeys, gets a decoy credential, so the page doesn't reveal which accounts exist. The decoy comes from an HMAC of the ID, keyed from `RECOVERY_PEPPER`, so it's the same on every node and after a restart, as a real user's credentials would be. Without a pepper the key is per JVM, and the class warns at startup. Each decoy takes the credential ID length and transports of one of a few common kinds of passkey, chosen by the ID, so it doesn't stand out by shape. A real user's answer does the same directory work as a decoy's: one search for the ID, then one read, of their passkeys, which the challenge reuses.
+- **Account state:** no password is checked, so the directory never refuses a bind. The class reads `loginDisabled`, the intruder lockout and `loginExpirationTime` itself, then runs NAM's login policy check, and refuses unless both pass. An attribute with no value doesn't restrict the account, and a value it can't understand refuses. eDirectory returns an attribute the proxy account may not read as if it had none, so the administrator must grant the proxy account read access to these attributes. With `ACCOUNT_CHECK=verify-rights` the class confirms that right with eDirectory's Get Effective Privileges extended operation before trusting an empty value, caching a confirmed answer per container for an hour, and refuses without it. `ACCOUNT_CHECK=off` leaves the account state to NAM's login policy check alone.
 - **User verification** is always required.
 
-Known gaps: a user with several passkeys lists that many, while a decoy always lists one; a real user's lookup takes one more directory read; and when the directory is failing, an unknown ID can see "please try again" where a known one wouldn't.
+Known gaps, which only tell whether an ID has a passkey: a user with several passkeys lists that many, while a decoy always lists one; decoys take common shapes, so someone who knows which authenticators your users have could still guess from the mix, though not from one look at a credential; the directory work is matched, but its time isn't measured to the millisecond; and when the directory is failing, an unknown ID can see "please try again" where a known one wouldn't. No decoy can be perfect while the browser must be given real credential IDs. `ALLOW_IDENTIFIER_FIRST=false` removes all of these: signing in with the passkey alone sends no credential IDs at all.
 
 ## The first passkey
 
@@ -111,12 +111,13 @@ What each part relies on, and the checks behind it:
 - **Challenges** are single-use, bound to the session and the user, and time-limited.
 - **`MFA` mode:** the passkey's user handle must be the user the earlier method identified.
 - **Registration flags:** creating a passkey needs user verification, except in `UPGRADE` mode, where the browser creates it without the user present or verified. Only that mode accepts such a registration, and only for a user with no passkey.
+- **Registration:** the creation options list the user's existing passkeys, so an authenticator that already holds one refuses to make another rather than silently replacing it.
 - **Management:** a user with passkeys must prove one, with user verification, before the manage page shows anything; a password alone never adds or removes a passkey on such an account.
 - **Recovery:** codes and tokens are single-use and stored only as HMACs. New codes are held back after a recovery for `RECOVERY_COOLDOWN_SEC`, so someone who recovered an account first can't lock its owner out; with `NOTIFY_EMAIL`, the owner is emailed.
 - **Helpdesk:** agents are checked against the group on every request, must prove their own passkey and confirm each identity check, and can't issue a token for themselves. Every issue is logged.
 - **Authenticator allow-list:** an AAGUID counts only with attestation that chains to a configured vendor root.
 - **Password manager signals** (`SIGNAL_PASSWORD_MANAGERS`): a page passes the list of a user's passkeys only from a fresh, successful read, never an empty one, and only after the user proved a passkey from that list in this sign-in. The passkey-only page reports a passkey as unknown only when its user was found with other passkeys and not this one. Anything uncertain sends nothing, so a working passkey is never dropped.
-- **Pages:** every value a page prints is HTML- or JavaScript-escaped, and the WebAuthn options JSON is escaped for its `<script>` block.
+- **Pages:** every value a page prints is HTML- or JavaScript-escaped, and the WebAuthn options JSON is escaped for its `<script>` block. Every passkey page is sent with `Cache-Control: no-store`, since each holds a live challenge, action token, CSRF token or codes, so neither the browser nor a cache in between keeps it.
 - **Logging:** no challenge, signature, code, token, answer, email address or the pepper is logged. Every message is cleaned of control characters and markup, so text the browser sent can't forge a log line.
 
 Each point has a unit test, and the browser tests cover the flows end to end. What the class can't control: other contracts on the Identity Server stay reachable, so a password-only contract still works unless it's removed or applications require a higher authentication level; and with the default settings, or with `UPGRADE`, a password alone can enroll a first passkey.

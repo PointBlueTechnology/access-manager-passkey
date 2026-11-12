@@ -70,14 +70,18 @@ final class RecoveryStore {
     /** Replaces any existing codes. @return the new codes, for showing once; never stored or logged */
     List<String> generateCodes(int count) {
         List<String> display = new ArrayList<>();
-        List<String> values = withoutPrefix(attributes.read(codeAttribute), CODE_PREFIX);
+        List<String> hashes = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             String code = random(CODE_CHARS);
             display.add(group(code));
-            values.add(CODE_PREFIX + hmac(code));
+            hashes.add(CODE_PREFIX + hmac(code));
         }
         PasskeyStore.ensureAuxClass(attributes, auxClass);
-        attributes.replace(codeAttribute, values);
+        attributes.update(codeAttribute, before -> {
+            List<String> values = withoutPrefix(before, CODE_PREFIX);
+            values.addAll(hashes);
+            return values;
+        });
         return display;
     }
 
@@ -96,10 +100,13 @@ final class RecoveryStore {
      * passkey made during recovery can't end a cool-down.
      */
     void markRecovered() {
-        List<String> values = withoutPrefix(attributes.read(codeAttribute), RECOVERED_PREFIX);
-        values.add(RECOVERED_PREFIX + clock.millis());
+        String recovered = RECOVERED_PREFIX + clock.millis();
         PasskeyStore.ensureAuxClass(attributes, auxClass);
-        attributes.replace(codeAttribute, values);
+        attributes.update(codeAttribute, before -> {
+            List<String> values = withoutPrefix(before, RECOVERED_PREFIX);
+            values.add(recovered);
+            return values;
+        });
     }
 
     /** When the account was last recovered, if ever. */
@@ -134,10 +141,13 @@ final class RecoveryStore {
     IssuedToken issueToken(long ttlSec) {
         String token = random(TOKEN_CHARS);
         Instant expires = clock.instant().plusSeconds(ttlSec);
-        List<String> values = withoutPrefix(attributes.read(tokenAttribute), TOKEN_PREFIX);
-        values.add(TOKEN_PREFIX + hmac(token) + ":" + expires.toEpochMilli() + ":0");
+        String issued = TOKEN_PREFIX + hmac(token) + ":" + expires.toEpochMilli() + ":0";
         PasskeyStore.ensureAuxClass(attributes, auxClass);
-        attributes.replace(tokenAttribute, values);
+        attributes.update(tokenAttribute, before -> {
+            List<String> values = withoutPrefix(before, TOKEN_PREFIX);
+            values.add(issued);
+            return values;
+        });
         return new IssuedToken(group(token), expires);
     }
 
@@ -166,6 +176,10 @@ final class RecoveryStore {
         return consumeTokenHash(hmac(normalized));
     }
 
+    /**
+     * Removes the matching code in one directory change that fails if the code is already gone, so of
+     * two requests using the same code at once, only one gets it.
+     */
     private boolean consumeCode(String candidate) {
         List<String> values = attributes.read(codeAttribute);
         String matched = null;
@@ -178,9 +192,42 @@ final class RecoveryStore {
         if (matched == null) {
             return false;
         }
-        values.remove(matched);
-        attributes.replace(codeAttribute, values);
-        return true;
+        List<String> after = new ArrayList<>(values);
+        after.remove(matched);
+        return changeOnce(codeAttribute, values, after);
+    }
+
+    /**
+     * Counts a wrong entry against the waiting token, removing it at MAX_FAILED. Retried on a clash, so
+     * wrong entries sent at the same moment are each counted.
+     */
+    private void countWrongEntry(String tokenHash) {
+        String prefix = TOKEN_PREFIX + tokenHash + ":";
+        attributes.update(tokenAttribute, before -> {
+            List<String> after = new ArrayList<>();
+            for (String value : before) {
+                if (!value.startsWith(prefix)) {
+                    after.add(value);
+                    continue;
+                }
+                String[] parts = value.substring(TOKEN_PREFIX.length()).split(":");
+                long failed = (parts.length == 3 ? parseLong(parts[2]) : maxFailed) + 1;
+                if (failed < maxFailed) {
+                    after.add(prefix + parts[1] + ":" + failed);
+                }
+            }
+            return after;
+        });
+    }
+
+    /** One attempt; false if another request changed the attribute first, as when it used the same value. */
+    private boolean changeOnce(String attribute, List<String> before, List<String> after) {
+        try {
+            attributes.change(attribute, before, after);
+            return true;
+        } catch (ConcurrentChangeException e) {
+            return false;
+        }
     }
 
     private boolean consumeTokenHash(String candidate) {
@@ -193,18 +240,14 @@ final class RecoveryStore {
             List<String> others = new ArrayList<>(values);
             others.remove(value);
             if (parts.length != 3 || clock.millis() > parseLong(parts[1])) {
-                attributes.replace(tokenAttribute, others);
+                changeOnce(tokenAttribute, values, others);
                 return false;
             }
             if (same(parts[0], candidate)) {
-                attributes.replace(tokenAttribute, others);
-                return true;
+                // Removed in a change that fails if the token is already gone: it works only once
+                return changeOnce(tokenAttribute, values, others);
             }
-            long failed = parseLong(parts[2]) + 1;
-            if (failed < maxFailed) {
-                others.add(TOKEN_PREFIX + parts[0] + ":" + parts[1] + ":" + failed);
-            }
-            attributes.replace(tokenAttribute, others);
+            countWrongEntry(parts[0]);
             return false;
         }
         return false;

@@ -67,7 +67,7 @@
                 <tr>
                     <td>
                         <%=pkHtml(pkRow.name())%>
-                        <span class="pk-manage-detail"><%=pkHtml(pkRow.provider())%><%=pkRow.provider().isEmpty() ? "" : " &middot; "%><%=pkHtml(PasskeyMessages.get(pkLocale, pkRow.synced() ? "manage.synced" : "manage.deviceOnly"))%><% if (pkRow.viaRecovery()) { %> &middot; <%=pkHtml(PasskeyMessages.get(pkLocale, "manage.viaRecovery"))%><% } %></span>
+                        <span class="pk-manage-detail"><%=pkHtml(pkRow.provider())%><%=pkRow.provider().isEmpty() ? "" : " &middot; "%><%=pkHtml(PasskeyMessages.get(pkLocale, pkRow.backupKey()))%><% if (pkRow.viaRecovery()) { %> &middot; <%=pkHtml(PasskeyMessages.get(pkLocale, "manage.viaRecovery"))%><% } %></span>
                     </td>
                     <td class="pk-manage-date"><%=pkHtml(pkRow.created())%></td>
                     <td class="pk-manage-date"><%=pkHtml(pkRow.lastUsed().isEmpty() ? PasskeyMessages.get(pkLocale, "manage.never") : pkRow.lastUsed())%></td>

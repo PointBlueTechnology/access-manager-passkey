@@ -1,5 +1,7 @@
 # Passkey authentication for OpenText Access Manager
 
+[![Build](https://github.com/PointBlueTechnology/access-manager-passkey/actions/workflows/build.yml/badge.svg)](https://github.com/PointBlueTechnology/access-manager-passkey/actions/workflows/build.yml)
+
 A WebAuthn / passkey authentication class for the OpenText Access Manager (NAM) 5.1.3 / 26.2 Identity Server. Users sign in with a passkey after their password, with a user ID and a passkey, or with a passkey alone. Each user can keep several passkeys, stored on an attribute of their directory entry.
 
 > **Not an OpenText product.** This is an independent project by PointBlue Technology. It isn't made, endorsed or supported by OpenText, so please don't contact OpenText support about it; use this repository's [issues](https://github.com/PointBlueTechnology/access-manager-passkey/issues) instead. It's built on Access Manager's supported extension points: the custom authentication class API and SDK that OpenText provides for adding sign-in methods to the Identity Server.
@@ -63,7 +65,7 @@ This is a beta. What has been tested, and what hasn't yet:
 | Unit tests | Every ceremony against a software authenticator, configuration, recovery codes and tokens, emails, SSPR answer formats, the NMAS exchange against a fake server, log cleaning |
 | Browser tests on Access Manager 5.1.3 + eDirectory | Passkey-only sign-in by button and autofill, refusing a disabled account, the fallback link, password manager sync (with Chrome's virtual authenticator), the emailed first-passkey code, SSPR security questions, recovery codes, helpdesk tokens, `MAX_FAILED`, nothing secret in the log ([details](docs/BUILDING.md#browser-tests)) |
 | By hand | Touch ID with Safari and Chrome on macOS, including autofill |
-| **Not yet** | Active Directory user stores; NMAS security questions against a live directory; the helpdesk first-passkey check, the authenticator allow-list, and the automatic upgrade end to end (unit-tested only); password manager sync with real password managers; Windows Hello, Android, password managers, hardware security keys and phone sign-in by QR code; multi-node clusters and containers; translations |
+| **Not yet** | Active Directory user stores; NMAS security questions against a live directory; the helpdesk first-passkey check, the authenticator allow-list, the automatic upgrade, and `ACCOUNT_CHECK=verify-rights` refusing a proxy account that can't read the account's restrictions end to end (unit-tested only); password manager sync with real password managers; Windows Hello, Android, password managers, hardware security keys and phone sign-in by QR code; multi-node clusters and containers; translations |
 
 ## Installing
 
@@ -135,9 +137,10 @@ Properties set on the Class apply to every method, and a Method's own value over
 | `HELPDESK_ALLOWED_DNS` | none | Users allowed to issue tokens whatever groups they're in, separated by semicolons |
 | `ENROLL_TOKEN_TTL_SEC` | `86400` | Helpdesk token lifetime, 300–604800 |
 | `REQUIRE_ONE` | `false` | `MANAGE`: refuse to remove the last passkey |
-| `MANAGE_MAX_AUTH_AGE_SEC` | `300` | `MANAGE`: how long a passkey proof unlocks the page (30–86400) |
+| `MANAGE_MAX_AUTH_AGE_SEC` | `300` | `MANAGE` and `HELPDESK`: how long a passkey proof unlocks the page (30–86400). Only a proof made by that method, in that sign-in, counts |
 | `NOTIFY_EMAIL` | `false` | Email users about passkey changes, recoveries and helpdesk codes. Set on the class. See [Notification emails](#notification-emails) |
 | `NOTIFY_MAIL_ATTRIBUTE` | `mail` | The user attribute holding their address |
+| `ACCOUNT_CHECK` | `attributes` | `LOGIN` mode: `attributes`, `verify-rights` or `off`. See [Signing in with only a passkey](#signing-in-with-only-a-passkey) |
 | `SIGNAL_PASSWORD_MANAGERS` | `false` | Tell users' password managers which passkeys are still registered, so removed ones stop being offered. Set on the class. See [Keeping password managers in sync](#keeping-password-managers-in-sync) |
 | `LAST_USED_WRITE_INTERVAL` | `86400` | Seconds between "last used" writes when nothing else changed |
 | `JSP_MFA`, `JSP_REGISTER`, `JSP_MANAGE`, `JSP_LOGIN`, `JSP_RECOVERY`, `JSP_CODES`, `JSP_HELPDESK`, `JSP_GATE`, `JSP_UPGRADE` | `passkey_mfa` and so on | Page names, for a site using renamed copies |
@@ -163,9 +166,17 @@ Create a Method on the class with the property `MODE=LOGIN` and **Identifies Use
 
 `LOGIN` mode can't enroll, so users get their first passkey through an `MFA` or `MANAGE` contract, or from their browser through an [`UPGRADE`](#automatic-passkey-upgrade) method.
 
-Since no password is checked, eDirectory never gets the chance to refuse a bind, so the class checks the account itself. On eDirectory it refuses when `loginDisabled` is TRUE, an intruder lockout hasn't reset yet, or `loginExpirationTime` has passed. It then also runs NAM's login policy check (NMAS), and refuses the sign-in unless that passes outright. The class's own check doesn't depend on what NMAS's policy covers. On AD, NAM's check reads `userAccountControl` itself. Anything the class can't read refuses. Grant the user store's proxy account read access to `loginDisabled`, `lockedByIntruder`, `loginIntruderResetTime` and `loginExpirationTime`, because without it they read as unset. Time-of-day and address restrictions aren't checked.
+Since no password is checked, eDirectory never gets the chance to refuse a bind, so the class checks the account itself. On eDirectory it refuses when `loginDisabled` is TRUE, an intruder lockout hasn't reset yet, or `loginExpirationTime` has passed. It then also runs NAM's login policy check (NMAS), and refuses the sign-in unless that passes outright. The class's own check doesn't depend on what NMAS's policy covers. On AD, NAM's check reads `userAccountControl` itself. An attribute with no value doesn't restrict the account. A value the class can't understand refuses. Time-of-day and address restrictions aren't checked.
 
-An unknown ID, or one with no passkeys, gets a made-up credential ID, so the page doesn't reveal which accounts exist. The decoy is derived from `RECOVERY_PEPPER`, so it's the same on every node and after a restart; without a pepper the class warns at startup. A user with more than one passkey lists that many, so the count can still hint at a real account.
+**Grant the user store's proxy account read access** to `loginDisabled`, `lockedByIntruder`, `loginIntruderResetTime` and `loginExpirationTime`. That's the administrator's job, and it matters: eDirectory returns an attribute the proxy may not read as if it had no value, so without the right a disabled or locked account looks enabled. `ACCOUNT_CHECK` sets how the class handles this:
+
+| `ACCOUNT_CHECK` | What the class does |
+|---|---|
+| `attributes` (default) | Reads the four attributes, trusting that the proxy account may read them |
+| `verify-rights` | Also asks eDirectory, with its Get Effective Privileges extended operation, whether the proxy account may read each attribute of the user, and refuses the sign-in if it may not or if eDirectory can't say. A confirmed answer is kept for an hour per container, so most sign-ins ask nothing; a refusal isn't kept, so a fixed ACL works at once. The log names the attribute the proxy can't read |
+| `off` | Skips the class's own check. Passkey-only sign-ins then rely on NAM's login policy check alone, and the class logs a warning at startup |
+
+An unknown ID, or one with no passkeys, gets a made-up credential ID, so the page doesn't reveal which accounts exist. The decoy is derived from `RECOVERY_PEPPER`, so it's the same on every node and after a restart; without a pepper the class warns at startup. It takes the length and transports of a common kind of passkey, and a real user's answer takes the same directory work as a decoy's. It can't hide everything: a user with more than one passkey lists that many, so the count can still hint that an ID has passkeys. Where that matters, set `ALLOW_IDENTIFIER_FIRST=false`, which leaves signing in with the passkey alone, where no credential IDs are sent.
 
 There's no password in the session after this contract, so anything that replays the user's password, such as Identity Injection or Form Fill of a password, won't have one.
 
@@ -228,7 +239,7 @@ For a worked example, see [YubiKey-only passkeys, moving from certificate sign-i
 
 Create a Method on the class with the property `MODE=MANAGE`, and a Contract of Name/Password followed by that Method. Users reach the page by signing in through that contract; link to it from a portal or bookmark.
 
-A user who has passkeys must prove one, with user verification, before the page shows anything, and again after `MANAGE_MAX_AUTH_AGE_SEC`. A rename, remove, add or Done stopped by that finishes once they confirm. A password alone never adds or removes a passkey on an account that has one. A user with no passkeys can enroll from the page if `ENROLL_IF_NONE` is on, after any [first-passkey checks](#the-first-passkey). Finishing the method doesn't require a passkey for that user, so don't give this contract a higher authentication level than its earlier methods. Removing the last passkey returns the account to that no-passkey state; set `REQUIRE_ONE=true` to prevent it.
+A user who has passkeys must prove one, with user verification, before the page shows anything, and again after `MANAGE_MAX_AUTH_AGE_SEC`. A passkey used in another contract doesn't count, even moments earlier in the same browser. A rename, remove, add or Done stopped by that finishes once they confirm. A password alone never adds or removes a passkey on an account that has one. A user with no passkeys can enroll from the page if `ENROLL_IF_NONE` is on, after any [first-passkey checks](#the-first-passkey). Finishing the method doesn't require a passkey for that user, so don't give this contract a higher authentication level than its earlier methods. Removing the last passkey returns the account to that no-passkey state; set `REQUIRE_ONE=true` to prevent it.
 
 ## Keeping password managers in sync
 

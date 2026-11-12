@@ -65,10 +65,14 @@ final class PasskeyLogin {
         if (id.isEmpty() || id.length() > MAX_ID_LENGTH) {
             return LoginCredentialRepository.decoyUsername(id);
         }
-        return directory.byId(id)
-                .filter(user -> !user.store().load().isEmpty())
-                .map(user -> user.account().guid())
-                .orElseGet(() -> LoginCredentialRepository.decoyUsername(id));
+        // A real user's answer does the same directory work as a decoy's: one search for the ID and
+        // one read, here of their passkeys, which the challenge then reuses
+        Optional<UserDirectory.User> found = directory.byId(id);
+        if (found.isPresent() && !repository.passkeys(found.get()).isEmpty()) {
+            repository.remember(found.get());
+            return found.get().account().guid();
+        }
+        return LoginCredentialRepository.decoyUsername(id);
     }
 
     private String start(StartAssertionOptions.StartAssertionOptionsBuilder options) {
@@ -109,7 +113,6 @@ final class PasskeyLogin {
         if (!user.isPresent()) {
             throw new CeremonyFailedException("error.loginFailed", "User disappeared during sign-in");
         }
-        state.markVerified(user.get().account().guid());
         recordUse(user.get(), result);
         return user.get();
     }

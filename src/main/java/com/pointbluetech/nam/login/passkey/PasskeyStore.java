@@ -3,6 +3,7 @@ package com.pointbluetech.nam.login.passkey;
 import com.yubico.webauthn.data.ByteArray;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -31,26 +32,55 @@ final class PasskeyStore {
         this.auxClass = auxClass;
     }
 
+    /** Oldest first: the directory doesn't keep values in any order, and a change can move them. */
     List<PasskeyRecord> load() {
         List<PasskeyRecord> records = new ArrayList<>();
         parse(attributes.read(attribute), records, new ArrayList<>());
+        records.sort(Comparator.comparing(PasskeyRecord::created, Comparator.nullsFirst(Comparator.naturalOrder())));
         return records;
     }
 
+    /**
+     * Applies a change to the passkeys as a change to the directory values, so only passkeys that
+     * changed are written: values that aren't passkeys, and anything written meanwhile, are left as
+     * they are. If the attribute changes in between, it starts again from a fresh read.
+     */
     void update(UnaryOperator<List<PasskeyRecord>> change) {
-        List<PasskeyRecord> records = new ArrayList<>();
-        // Values we can't parse (corrupt, or written by a newer version) survive the rewrite
-        List<String> unreadable = new ArrayList<>();
-        parse(attributes.read(attribute), records, unreadable);
+        attributes.update(attribute, before -> {
+            List<PasskeyRecord> records = new ArrayList<>();
+            List<String> others = new ArrayList<>();
+            parse(before, records, others);
+            List<String> after = new ArrayList<>();
+            for (String value : before) {
+                // Unchanged passkeys keep their stored text, so they aren't rewritten
+                if (others.contains(value)) {
+                    after.add(value);
+                }
+            }
+            List<PasskeyRecord> updated = change.apply(records);
+            for (PasskeyRecord record : updated) {
+                String kept = storedText(before, record);
+                after.add(kept != null ? kept : record.encode());
+            }
+            if (!after.isEmpty()) {
+                ensureAuxClass(attributes, auxClass);
+            }
+            return after;
+        });
+    }
 
-        List<String> values = new ArrayList<>(unreadable);
-        for (PasskeyRecord record : change.apply(records)) {
-            values.add(record.encode());
+    /** The value already stored for exactly this record, if it hasn't changed. */
+    private static String storedText(List<String> values, PasskeyRecord record) {
+        for (String value : values) {
+            try {
+                if (PasskeyRecord.decode(value).encode().equals(record.encode())) {
+                    return value;
+                }
+            } catch (IllegalArgumentException e) {
+                // not a passkey
+            }
         }
-        if (!values.isEmpty()) {
-            ensureAuxClass(attributes, auxClass);
-        }
-        attributes.replace(attribute, values);
+        return null;
     }
 
     /**
@@ -106,7 +136,15 @@ final class PasskeyStore {
         if (classes.stream().noneMatch(auxClass::equalsIgnoreCase)) {
             List<String> updated = new ArrayList<>(classes);
             updated.add(auxClass);
-            attributes.replace(OBJECT_CLASS, updated);
+            try {
+                // Adds the one class; the entry's other classes aren't touched
+                attributes.change(OBJECT_CLASS, classes, updated);
+            } catch (ConcurrentChangeException e) {
+                if (attributes.read(OBJECT_CLASS).stream().noneMatch(auxClass::equalsIgnoreCase)) {
+                    throw e;
+                }
+                // Someone else added it meanwhile
+            }
         }
     }
 }

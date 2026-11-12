@@ -1,0 +1,19 @@
+# Weekly update pull requests for the Maven libraries bundled in the jar, the browser tests'
+# dependencies, and the GitHub Actions the build uses.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Access Manager's own jars, installed from a real Identity Server; not in any public repository
+      - dependency-name: "com.novell.nam:*"
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

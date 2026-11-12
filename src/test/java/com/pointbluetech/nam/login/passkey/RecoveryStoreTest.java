@@ -57,6 +57,53 @@ class RecoveryStoreTest {
     }
 
     @Test
+    void aCodeUsedByTwoRequestsAtOnceWorksForOnlyOne() {
+        String code = store().generateCodes(3).get(0);
+        RecoveryStore.Match[] other = new RecoveryStore.Match[1];
+        directory.beforeNextChange = () -> other[0] = store().consume(code);
+
+        RecoveryStore.Match mine = store().consume(code);
+
+        assertEquals(RecoveryStore.Match.CODE, other[0]);
+        assertEquals(RecoveryStore.Match.NONE, mine);
+        assertEquals(2, store().codesLeft());
+    }
+
+    @Test
+    void aTokenUsedByTwoRequestsAtOnceWorksForOnlyOne() {
+        String token = store().issueToken(3600).display;
+        boolean[] other = new boolean[1];
+        directory.beforeNextChange = () -> other[0] = store().consumeToken(token);
+
+        assertFalse(store().consumeToken(token));
+        assertTrue(other[0]);
+    }
+
+    @Test
+    void wrongTokenEntriesAtTheSameMomentAreEachCounted() {
+        String token = store().issueToken(3600).display;
+        directory.beforeNextChange = () -> store().consumeToken("AAAA-AAAA-AAAA-AAAA");
+        store().consumeToken("BBBB-BBBB-BBBB-BBBB");
+
+        // MAX_FAILED is 3 here: a third wrong entry removes the token, so the right one fails
+        store().consumeToken("CCCC-CCCC-CCCC-CCCC");
+        assertFalse(store().consumeToken(token));
+    }
+
+    @Test
+    void aPasskeyWrittenMeanwhileDoesNotBringBackAUsedCode() {
+        String code = store().generateCodes(2).get(0);
+        PasskeyStore passkeys = new PasskeyStore(directory, ATTR, "");
+        // The passkey write read the attribute before the code was used, and writes after
+        directory.beforeNextChange = () -> assertEquals(RecoveryStore.Match.CODE, store().consume(code));
+        passkeys.update(records -> records);
+        passkeys.update(records -> new ArrayList<>(records));
+
+        assertEquals(1, store().codesLeft());
+        assertEquals(RecoveryStore.Match.NONE, store().consume(code));
+    }
+
+    @Test
     void codesForgiveCaseSpacesAndDashes() {
         String code = store().generateCodes(1).get(0);
 

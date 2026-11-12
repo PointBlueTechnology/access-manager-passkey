@@ -116,6 +116,11 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                 }
             });
 
+    /** Confirmed rights of the proxy account to read account restrictions, shared by every instance. */
+    private static final ReadRightsCache READ_RIGHTS = new ReadRightsCache(Clock.systemUTC(), 10_000);
+    /** How long a confirmed right is trusted before eDirectory is asked again. */
+    private static final long READ_RIGHTS_CACHE_SEC = 3_600;
+
     private final PasskeyConfig config;
 
     public PasskeyAuthClass(Properties props, ArrayList<UserAuthority> uStores) throws NIDPException {
@@ -132,6 +137,10 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                         && !config.recoveryPepper().isPresent()) {
                     logWarning("Set RECOVERY_PEPPER, the same on every Identity Server node: without it, the decoys"
                             + " that hide which IDs have passkeys differ between nodes and after a restart");
+                }
+                if (config.mode() == PasskeyConfig.Mode.LOGIN && config.accountCheck() == PasskeyConfig.AccountCheck.OFF) {
+                    logWarning("ACCOUNT_CHECK=off: passkey-only sign-ins don't check loginDisabled, intruder lockout"
+                            + " or expiry themselves, and rely on NAM's login policy check alone");
                 }
             }
         } catch (IllegalArgumentException e) {
@@ -159,6 +168,8 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                     config.challengeTtlSec(), Clock.systemUTC());
             if (isFirstCallAfterPrevMethod()) {
                 state.clear();
+                // A proof from an earlier method, or an earlier contract in this session, doesn't count here
+                state.forgetVerified();
             }
             PasskeyStore store = new PasskeyStore(new NamUserAttributes(principal, m_Session),
                     config.passkeyAttribute(), config.auxClass());
@@ -251,6 +262,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                     config.challengeTtlSec(), Clock.systemUTC());
             if (isFirstCallAfterPrevMethod()) {
                 state.clear();
+                state.forgetVerified();
             }
             PasskeyLogin login = new PasskeyLogin(config, new NamUserDirectory(), state, Clock.systemUTC());
             try {
@@ -313,8 +325,10 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
      */
     private boolean mayLogIn(NIDPPrincipal principal) {
         UserAuthority authority = principal.getAuthority();
-        if (authority == null || !authority.isActiveDirectory()) {
-            // NAM's check below is enough on AD, where it reads userAccountControl itself
+        if (config.accountCheck() != PasskeyConfig.AccountCheck.OFF
+                && (authority == null || !authority.isActiveDirectory())) {
+            // NAM's check below is enough on AD, where it reads userAccountControl itself, and is all
+            // there is with ACCOUNT_CHECK=off
             try {
                 NamUserAttributes attributes = new NamUserAttributes(principal, m_Session);
                 if (NIDPLog.isLoggableAppFine()) {
@@ -325,7 +339,12 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
                     }
                     logFine("Account restrictions read for " + principal.getUserIdentifier() + ":" + seen);
                 }
-                Optional<String> refusal = AccountRestrictions.refusal(attributes, Instant.now());
+                // Granting the proxy account read access is the administrator's job. Without it these
+                // attributes read as unset, so ACCOUNT_CHECK=verify-rights can confirm it with eDirectory
+                AccountRestrictions.ReadRights rights = config.accountCheck() == PasskeyConfig.AccountCheck.VERIFY_RIGHTS
+                        ? READ_RIGHTS.cached(attributes.rightsScope(), READ_RIGHTS_CACHE_SEC, attributes::canRead)
+                        : AccountRestrictions.ReadRights.ASSUMED;
+                Optional<String> refusal = AccountRestrictions.refusal(attributes, rights, Instant.now());
                 if (refusal.isPresent()) {
                     logWarning("Login policy refused " + principal.getUserIdentifier() + " (" + refusal.get() + ")");
                     return false;
@@ -1080,7 +1099,6 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
         page.addAttribute("pk_issued_token", (Object) token.display);
         page.addAttribute("pk_issued_user", (Object) target);
         page.addAttribute("pk_issued_expires", (Object) EXPIRY.format(token.expires));
-        noStore();
         return SHOW_JSP;
     }
 
@@ -1148,11 +1166,13 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
     private int showCodes(List<String> codes) {
         PageToShow page = page(config.codesJsp(), null);
         page.addAttribute("pk_codes", (Object) codes);
-        noStore();
         return SHOW_JSP;
     }
 
-    /** Codes and tokens are shown once; the browser must not keep the page. */
+    /**
+     * Every passkey page holds something live (a challenge, an action token, the CSRF token, or codes
+     * shown once), so neither the browser nor a cache in between may keep it.
+     */
     private void noStore() {
         m_Response.setHeader("Cache-Control", "no-store");
         m_Response.setHeader("Pragma", "no-cache");
@@ -1195,6 +1215,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
 
     private int signIn(CeremonyState state, NIDPPrincipal principal) {
         state.clear();
+        state.forgetVerified();
         setPrincipal(principal);
         return AUTHENTICATED;
     }
@@ -1266,6 +1287,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
     }
 
     private PageToShow page(String jsp, String messageKey) {
+        noStore();
         m_PageToShow = new PageToShow(jsp);
         m_PageToShow.addAttribute("url", getReturnURL());
         m_PageToShow.addAttribute("pk_fallback", fallbackUrl());
@@ -1314,6 +1336,7 @@ public class PasskeyAuthClass extends LocalAuthenticationClass {
     }
 
     private int showFramePage(CeremonyState state, String messageKey) {
+        noStore();
         if (messageKey != null) {
             state.setPendingMessage(messageKey);
         }

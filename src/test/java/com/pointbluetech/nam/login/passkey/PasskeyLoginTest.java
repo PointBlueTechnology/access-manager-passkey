@@ -179,6 +179,38 @@ class PasskeyLoginTest {
     }
 
     @Test
+    void aRealUsersAnswerTakesNoMoreDirectoryWorkThanADecoys() throws Exception {
+        directorySearches = 0;
+        login().startForId("alice");
+        int real = directorySearches;
+
+        directorySearches = 0;
+        login().startForId("nobody");
+        int unknown = directorySearches;
+
+        directorySearches = 0;
+        login().startForId("nopasskeys");
+        int noPasskeys = directorySearches;
+
+        assertEquals(unknown, real);
+        assertEquals(unknown, noPasskeys);
+    }
+
+    @Test
+    void decoysTakeTheShapesOfRealPasskeys() throws Exception {
+        java.util.Set<Integer> lengths = new java.util.TreeSet<>();
+        java.util.Set<String> transports = new java.util.TreeSet<>();
+        for (int i = 0; i < 400; i++) {
+            JsonNode allowed = publicKey(login().startForId("someone" + i)).get("allowCredentials").get(0);
+            lengths.add(java.util.Base64.getUrlDecoder().decode(allowed.get("id").asText()).length);
+            transports.add(allowed.get("transports").toString());
+        }
+        // Not one fixed length or transport list that would set a decoy apart
+        assertEquals(java.util.Set.of(16, 20, 32, 48, 64), lengths);
+        assertEquals(java.util.Set.of("[\"hybrid\",\"internal\"]", "[\"internal\"]", "[\"nfc\",\"usb\"]"), transports);
+    }
+
+    @Test
     void passkeyCannotSignInAgainstADecoy() throws Exception {
         assertFails(alice.get(login().startForId("nobody")));
     }
@@ -193,11 +225,10 @@ class PasskeyLoginTest {
     }
 
     @Test
-    void signInCountsAsProvingAPasskeyForTheManagePage() throws Exception {
+    void signInLeavesNoProofForAnotherMethodToUse() throws Exception {
         login().finish(alice.get(login().startUsernameless()));
 
-        assertTrue(new CeremonyState(sessionMap(), "other-method", guidOf(alice), 300, clock).verifiedWithin(300));
-        assertFalse(new CeremonyState(sessionMap(), "other-method", guidOf(bob), 300, clock).verifiedWithin(300));
+        assertFalse(new CeremonyState(sessionMap(), "other-method", guidOf(alice), 300, clock).verifiedWithin(300));
     }
 
     @Test

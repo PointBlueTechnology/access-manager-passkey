@@ -29,9 +29,15 @@ final class LdapCredentialRepository implements CredentialRepository {
         this.store = store;
     }
 
+    /**
+     * Sign-in asks with the GUID. Registration asks with the passkey's user name, which is the
+     * directory name users see in their password manager; its answer becomes the exclude list, which
+     * stops an authenticator that already holds one of this user's passkeys from making another, or
+     * from silently replacing it.
+     */
     @Override
     public Set<PublicKeyCredentialDescriptor> getCredentialIdsForUsername(String username) {
-        if (!account.guid().equals(username)) {
+        if (!account.guid().equals(username) && !account.name().equals(username)) {
             return Collections.emptySet();
         }
         return store.load().stream()

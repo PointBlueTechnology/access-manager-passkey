@@ -13,7 +13,7 @@ import org.slf4j.Logger;
  */
 public final class NidpLoggerFactory implements ILoggerFactory {
 
-    private static volatile NidpLogSink sink = new NidpAppLogSink();
+    private static volatile NidpLogSink sink = defaultSink();
 
     private final ConcurrentMap<String, Logger> loggers = new ConcurrentHashMap<>();
 
@@ -36,6 +36,19 @@ public final class NidpLoggerFactory implements ILoggerFactory {
 
     /** Restores the default NIDPLog Application-logger sink. */
     public static void resetSink() {
-        sink = new NidpAppLogSink();
+        sink = defaultSink();
+    }
+
+    /**
+     * NIDPLog's Application logger, loaded by name, as on the Identity Server. Without NAM's classes,
+     * as in a build that has no Identity Server jars to compile against, nothing is logged.
+     */
+    private static NidpLogSink defaultSink() {
+        try {
+            return (NidpLogSink) Class.forName("com.pointbluetech.nam.login.passkey.logging.NidpAppLogSink")
+                    .getDeclaredConstructor().newInstance();
+        } catch (ReflectiveOperationException | LinkageError e) {
+            return NidpLogSink.NONE;
+        }
     }
 }

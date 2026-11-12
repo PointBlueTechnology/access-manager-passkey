@@ -17,9 +17,14 @@ import java.util.regex.Pattern;
  * policy check (NMAS) runs as well, but this doesn't depend on what that policy covers. Anything
  * that can't be read or understood refuses.
  *
+ * <p>An attribute with no value doesn't restrict the account. eDirectory answers a read the user
+ * store's proxy account isn't allowed to make by leaving the attribute out, just as if it had no
+ * value, so the administrator must grant the proxy account read access to these attributes. With
+ * ACCOUNT_CHECK=verify-rights, each attribute is read only after eDirectory confirms that right,
+ * and the sign-in is refused without it or if the rights can't be checked.
+ *
  * <p>Not covered here: time-of-day restrictions ({@code loginAllowedTimeMap}) and address
- * restrictions. The NAM user store's proxy account must be able to read these attributes; without
- * that right they read as absent, which can't be told apart from an account that has none.
+ * restrictions.
  */
 final class AccountRestrictions {
 
@@ -35,11 +40,29 @@ final class AccountRestrictions {
     private static final Pattern GENERALIZED_TIME = Pattern.compile("^(\\d{14})(?:[.,]\\d+)?Z$");
     private static final DateTimeFormatter SECONDS = DateTimeFormatter.ofPattern("uuuuMMddHHmmss");
 
+    /** Whether the account that reads the directory may read an attribute of this user's entry. */
+    @FunctionalInterface
+    interface ReadRights {
+        /** The administrator is trusted to have granted the right; nothing is asked. */
+        ReadRights ASSUMED = attribute -> true;
+
+        /** @throws PasskeyStoreException if the rights couldn't be found out */
+        boolean canRead(String attribute);
+    }
+
     private AccountRestrictions() {
     }
 
-    /** @return why the account may not sign in, or empty if nothing stops it */
-    static Optional<String> refusal(UserAttributes attributes, Instant now) {
+    /**
+     * @return why the account may not sign in, or empty if nothing stops it
+     * @throws PasskeyStoreException if an attribute, or the right to read it, couldn't be read
+     */
+    static Optional<String> refusal(UserAttributes attributes, ReadRights rights, Instant now) {
+        for (String attribute : EDIRECTORY_ATTRIBUTES) {
+            if (!rights.canRead(attribute)) {
+                return Optional.of("the user store's proxy account can't read " + attribute);
+            }
+        }
         if (isTrue(attributes, LOGIN_DISABLED)) {
             return Optional.of("account disabled");
         }

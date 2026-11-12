@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { expect, test } from '@playwright/test';
+import { loadPasskey } from '../lib/authenticator';
 import { type Account, env } from '../lib/env';
 import { countValuesInLog, expectLog, expectNoLog, logMark } from '../lib/idpLog';
 import { countValuesInMail, expectMail, mailMark, userMail } from '../lib/mail';
@@ -44,6 +45,9 @@ async function enterCode(session: Session, code: string) {
 async function recoverWith(session: Session, code: string, kind: 'recovery code' | 'helpdesk token', mark: number) {
     const mailFrom = await mailMark();
     expect(await session.driveTo(['recovery'])).toBe('recovery');
+    // Someone recovering has lost their passkey, so this browser doesn't hold it. If it did, the browser
+    // would refuse to create another for the same account, since the server lists the ones it has
+    await session.authenticator.remove(loadPasskey(session.account.id)!.credentialId);
     expect(await enterCode(session, code)).toBe('register');
     expect(await session.driveTo(['manage'], { passkeyName: RECOVERED })).toBe('manage');
     expect(await session.message()).toBe(msg('manage.added'));

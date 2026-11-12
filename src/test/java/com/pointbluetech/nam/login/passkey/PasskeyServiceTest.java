@@ -331,17 +331,39 @@ class PasskeyServiceTest {
         assertEquals(3, service().passkeys().size());
 
         service().rename(second.id().getBase64Url(), "  Work\tphone ");
-        assertEquals("Work phone", service().passkeys().get(1).name());
-        assertEquals("Test", service().passkeys().get(0).name());
+        assertEquals("Work phone", nameOf(second));
+        assertEquals("Test", nameOf(first));
+        assertEquals("Key", nameOf(third));
 
         service().delete(first.id().getBase64Url());
         assertEquals(2, service().passkeys().size());
-        assertEquals("Work phone", service().passkeys().get(0).name());
+        assertEquals("Work phone", nameOf(second));
 
         // A removed passkey no longer signs in; the others still do
         assertVerifyFails(first.get(service().startAssertion()));
         signIn(second);
         signIn(third);
+    }
+
+    /** The directory keeps values in no particular order, so passkeys are found by ID. */
+    private String nameOf(VirtualAuthenticator authenticator) {
+        return service().passkeys().stream()
+                .filter(record -> record.credentialId().equals(authenticator.id()))
+                .findFirst().orElseThrow().name();
+    }
+
+    @Test
+    void creationOptionsListThePasskeysTheUserAlreadyHas() throws Exception {
+        VirtualAuthenticator first = enroll(1);
+        VirtualAuthenticator second = authenticator(2);
+        service().finishRegistration(second.create(service().startRegistration()), "Phone");
+
+        // Still enrolling in this login, so another may be added; the browser must be told about both
+        var excluded = new com.fasterxml.jackson.databind.ObjectMapper().readTree(service().startRegistration())
+                .get("publicKey").get("excludeCredentials");
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        excluded.forEach(node -> ids.add(node.get("id").asText()));
+        assertEquals(java.util.Set.of(first.id().getBase64Url(), second.id().getBase64Url()), ids);
     }
 
     @Test

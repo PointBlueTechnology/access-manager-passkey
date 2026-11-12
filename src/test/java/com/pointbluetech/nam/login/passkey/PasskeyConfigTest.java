@@ -69,6 +69,27 @@ class PasskeyConfigTest {
     }
 
     @Test
+    void accountCheckReadsTheAttributesUnlessToldOtherwise() {
+        Properties props = minimal();
+        props.setProperty("MODE", "LOGIN");
+        PasskeyConfig defaults = PasskeyConfig.from(props);
+        assertEquals(PasskeyConfig.AccountCheck.ATTRIBUTES, defaults.accountCheck());
+        assertFalse(defaults.describe().contains("accountCheck"));
+
+        props.setProperty("ACCOUNT_CHECK", "verify-rights");
+        PasskeyConfig verify = PasskeyConfig.from(props);
+        assertEquals(PasskeyConfig.AccountCheck.VERIFY_RIGHTS, verify.accountCheck());
+        assertTrue(verify.describe().contains("accountCheck=verify-rights"));
+
+        props.setProperty("ACCOUNT_CHECK", "off");
+        assertEquals(PasskeyConfig.AccountCheck.OFF, PasskeyConfig.from(props).accountCheck());
+
+        props.setProperty("ACCOUNT_CHECK", "sometimes");
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> PasskeyConfig.from(props))
+                .getMessage().contains("ACCOUNT_CHECK must be one of"));
+    }
+
+    @Test
     void recoveryCooldownIsOffUnlessSetAndHasALimit() {
         assertEquals(0, PasskeyConfig.from(minimal()).recoveryCooldownSec());
 

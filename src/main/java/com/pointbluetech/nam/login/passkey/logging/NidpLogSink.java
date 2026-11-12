@@ -11,6 +11,18 @@ import java.util.logging.Level;
  */
 public interface NidpLogSink {
 
+    /** Logs nothing: for builds and tests without the Identity Server's NIDPLog. */
+    NidpLogSink NONE = new NidpLogSink() {
+        @Override
+        public boolean isEnabled(Level level) {
+            return false;
+        }
+
+        @Override
+        public void log(Level level, String message, Throwable throwable) {
+        }
+    };
+
     boolean isEnabled(Level level);
 
     void log(Level level, String message, Throwable throwable);

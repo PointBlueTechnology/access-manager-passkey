@@ -28,7 +28,11 @@ final class CeremonyState {
 
     private static final String SEPARATOR = "|";
     private static final SecureRandom RANDOM = new SecureRandom();
-    /** Not scoped to a method: a passkey verified by one method in this session counts for others. */
+    /**
+     * A passkey proof, for the method that made it only: each method forgets it when it starts and
+     * when it finishes, so it can't unlock a method in a contract started later in the same session,
+     * which may have asked only for a password.
+     */
     private static final String VERIFIED_KEY = "pbtPasskey.verified";
 
     private final Session session;
@@ -367,7 +371,12 @@ final class CeremonyState {
         }
     }
 
-    /** Clears this method's state. {@link #markVerified} survives, and ages out on its own. */
+    /** Forgets any passkey proof, whichever method made it. */
+    void forgetVerified() {
+        session.put(VERIFIED_KEY, null);
+    }
+
+    /** Clears this method's state. {@link #markVerified} survives; see {@link #forgetVerified}. */
     void clear() {
         session.put(ceremonyKey, null);
         session.put(enrollingKey, null);

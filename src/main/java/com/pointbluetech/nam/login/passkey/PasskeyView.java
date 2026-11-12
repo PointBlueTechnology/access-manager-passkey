@@ -14,7 +14,7 @@ public final class PasskeyView {
     private final String provider;
     private final String created;
     private final String lastUsed;
-    private final boolean synced;
+    private final String backupKey;
     private final boolean viaRecovery;
 
     PasskeyView(PasskeyRecord record) {
@@ -23,7 +23,9 @@ public final class PasskeyView {
         this.provider = ProviderNames.forAaguid(record.aaguid()).orElse("");
         this.created = format(record.created());
         this.lastUsed = format(record.lastUsed());
-        this.synced = record.backupEligible();
+        // Backed up now, able to be but not yet (as just after creating it), or never: one device only
+        this.backupKey = record.backedUp() ? "manage.synced"
+                : record.backupEligible() ? "manage.notSyncedYet" : "manage.deviceOnly";
         this.viaRecovery = record.viaRecovery();
     }
 
@@ -37,7 +39,8 @@ public final class PasskeyView {
     public String created() { return created; }
     /** Empty if never used. */
     public String lastUsed() { return lastUsed; }
-    public boolean synced() { return synced; }
+    /** The message key describing whether the passkey is backed up by its provider. */
+    public String backupKey() { return backupKey; }
     /** Created while recovering the account, so worth a second look if the user doesn't know it. */
     public boolean viaRecovery() { return viaRecovery; }
 }

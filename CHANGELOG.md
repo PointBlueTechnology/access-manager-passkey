@@ -2,6 +2,29 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## 0.1.0-beta.3
+
+Upgrading from 0.1.0-beta.2: replace the jar and every JSP as in [INSTALL.md](INSTALL.md); only `passkey_manage.jsp` changed, and there are no new pages. Nothing needs configuring. Two changes in behaviour to know about: a contract that runs two passkey methods one after the other now asks for the passkey in each, and every identifier-first decoy changes once.
+
+### Security fixes
+
+- **Fix:** the creation options now list the user's existing passkeys. Before, the list was always empty, so an authenticator that already held one of the user's passkeys could make another, or silently replace it and leave a passkey on the server that no longer worked.
+- **Fix:** a recovery code or helpdesk token used by two requests at the same moment works for only one. Every write is now one LDAP modify that changes only the values that differ and fails if the attribute changed since it was read, so a write can no longer bring back a value someone else removed meanwhile, such as a used recovery code in a shared attribute. Wrong helpdesk-token entries made at the same moment are each counted.
+- **Fix:** a passkey proof unlocks the manage and helpdesk pages only for the method that made it; each passkey method forgets any proof when it starts and when it finishes. Before, a passkey sign-in, or a manage page left open, let a manage or helpdesk contract started afterwards in the same browser open after only the password.
+- Every passkey page is sent with `Cache-Control: no-store` and `Pragma: no-cache`, not only the pages showing recovery codes and helpdesk tokens. The others hold a live challenge or form tokens, and Access Manager doesn't send these headers for them in every setup.
+
+### Changes
+
+- `ACCOUNT_CHECK` for passkey-only sign-in (`LOGIN` mode): how the class checks eDirectory account restrictions itself. `attributes` (the default, as before) reads `loginDisabled`, the intruder lockout and `loginExpirationTime`. `verify-rights` also confirms with eDirectory that the user store's proxy account may read them, since eDirectory returns an attribute the proxy can't read as if it had no value, and refuses the sign-in without that right. `off` leaves the account state to NAM's login policy check alone.
+- Identifier-first decoys look more like real passkeys: each takes the credential ID length and transports of a common kind of passkey, where before every decoy was 32 bytes with the same transports. A real user's answer no longer takes an extra directory search, so it isn't slower than a decoy's. Upgrading changes every decoy once.
+- The manage page says "Synced" only for a passkey its provider reports as backed up now, "Not synced yet" for one that can be but isn't yet, and "This device only" for one that can't be. Before, it said "Synced" for any passkey that could be backed up.
+- Passkeys are listed oldest first, since the directory keeps values in no particular order.
+
+### Project
+
+- Continuous integration: GitHub Actions runs the unit tests on Java 11 and 21 and type-checks the browser tests, using a `ci` Maven profile that builds without Access Manager's jars; Dependabot keeps the dependencies current.
+- Docs: the proxy account must be able to read those attributes, and that's the administrator's to grant; the design notes no longer claim an unreadable attribute refuses by itself.
+
 ## 0.1.0-beta.2
 
 Upgrading from 0.1.0-beta.1: replace the jar and every JSP as in [INSTALL.md](INSTALL.md), and add the new `passkey_upgrade.jsp` (with the Advanced File Configurator, as a file of its own). Nothing else changes: both new features stay off until you configure them, and stored passkeys aren't touched.

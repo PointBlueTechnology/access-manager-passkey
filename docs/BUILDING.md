@@ -61,6 +61,18 @@ The unit tests need no server. They run real WebAuthn ceremonies against a softw
 - SSPR answer formats, using records written by SSPR's own library (ldapchai, test scope only)
 - the NMAS challenge-response exchange, against a fake server
 
+## Continuous integration
+
+GitHub Actions ([.github/workflows/build.yml](../.github/workflows/build.yml)) runs on every push to `main` and every pull request. The Access Manager jars can't be published, so it builds with the `ci` profile:
+
+```bash
+mvn -P ci test
+```
+
+That compiles and runs the unit tests for everything except the five classes that call Access Manager's API (`PasskeyAuthClass`, `NamUserAttributes`, `NamMailSender`, `NmasLogin` and `logging/NidpAppLogSink`), on Java 11 and 21. Those five are compiled by a normal build against your `reference/` jars, and exercised by the browser tests. The workflow also type-checks the browser tests. Don't package with `-P ci`: the jar would be missing those classes.
+
+Dependabot ([.github/dependabot.yml](../.github/dependabot.yml)) opens weekly pull requests for the bundled libraries, the browser tests' packages and the workflow's actions.
+
 ## Deploying to a test node
 
 ```bash
@@ -82,6 +94,7 @@ They cover:
 - recovering with a helpdesk token or a recovery code, each working only once, and creating new codes
 - ending an attempt after `MAX_FAILED` wrong codes
 - that no code, token or test password reaches the log or an email
+- that a browser already holding one of the account's passkeys is refused another, and that a passkey sign-in doesn't open the manage or helpdesk contract started afterwards in the same browser
 - password manager sync: removing a passkey on the manage page makes the browser forget that one and keep the others, and a passkey removed elsewhere is forgotten after it fails to sign in. Chrome deletes credentials from its virtual authenticators when a page signals, so the tests check what the browser did
 
 Touch ID, Safari autofill and the automatic upgrade are tested by hand, because the upgrade needs a real password manager that has just filled in the password.

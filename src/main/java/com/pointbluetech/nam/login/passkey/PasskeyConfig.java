@@ -38,6 +38,13 @@ public final class PasskeyConfig {
     /** Extra checks before a user's first passkey, in the order they're asked for. */
     public enum EnrollGate { EMAIL, HELPDESK, QUESTIONS }
 
+    /**
+     * LOGIN mode's own check of eDirectory account restrictions: read them, trusting the administrator
+     * to have let the proxy account read them; also confirm that right with eDirectory; or skip the
+     * check and leave it to NAM's login policy check alone.
+     */
+    public enum AccountCheck { ATTRIBUTES, VERIFY_RIGHTS, OFF }
+
     /** Where users' challenge-response answers are kept. */
     public enum QuestionStore { SSPR, NMAS }
 
@@ -96,6 +103,8 @@ public final class PasskeyConfig {
     public static final String NOTIFY_MAIL_ATTRIBUTE = "NOTIFY_MAIL_ATTRIBUTE";
     /** Tell users' password managers which passkeys are still registered (WebAuthn Signals API) */
     public static final String SIGNAL_PASSWORD_MANAGERS = "SIGNAL_PASSWORD_MANAGERS";
+    /** LOGIN mode: how the class checks eDirectory account restrictions itself */
+    public static final String ACCOUNT_CHECK = "ACCOUNT_CHECK";
 
     private final Mode mode;
     private final String rpId;
@@ -147,6 +156,7 @@ public final class PasskeyConfig {
     private final boolean notifyEmail;
     private final String notifyMailAttribute;
     private final boolean signalPasswordManagers;
+    private final AccountCheck accountCheck;
 
     private PasskeyConfig(Parser p) {
         mode = p.enumValue(MODE, Mode.class, Mode.MFA);
@@ -232,6 +242,7 @@ public final class PasskeyConfig {
         notifyEmail = p.bool(NOTIFY_EMAIL, false);
         notifyMailAttribute = p.string(NOTIFY_MAIL_ATTRIBUTE, "mail");
         signalPasswordManagers = p.bool(SIGNAL_PASSWORD_MANAGERS, false);
+        accountCheck = p.enumValue(ACCOUNT_CHECK, AccountCheck.class, AccountCheck.ATTRIBUTES);
 
         if (mode == Mode.LOGIN) {
             if (!allowUsernameless && !allowIdentifierFirst) {
@@ -421,6 +432,7 @@ public final class PasskeyConfig {
     public boolean notifyEmail() { return notifyEmail; }
     public String notifyMailAttribute() { return notifyMailAttribute; }
     public boolean signalPasswordManagers() { return signalPasswordManagers; }
+    public AccountCheck accountCheck() { return accountCheck; }
     public int manageMaxAuthAgeSec() { return manageMaxAuthAgeSec; }
 
     static boolean isIpLiteral(String host) {
@@ -445,7 +457,9 @@ public final class PasskeyConfig {
                         + ", trustRoots=" + attestationTrustRoots.size())
                 + ", recoveryCooldownSec=" + recoveryCooldownSec
                 + ", notifyEmail=" + notifyEmail
-                + (signalPasswordManagers ? ", signalPasswordManagers=true" : "");
+                + (signalPasswordManagers ? ", signalPasswordManagers=true" : "")
+                + (mode == Mode.LOGIN && accountCheck != AccountCheck.ATTRIBUTES
+                        ? ", accountCheck=" + accountCheck.name().toLowerCase(Locale.ROOT).replace('_', '-') : "");
     }
 
     private static final class Parser {
