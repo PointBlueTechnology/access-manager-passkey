@@ -9,10 +9,12 @@ if (fs.existsSync(envFile)) {
 
 /**
  * Checks that need a particular Admin Console setup on the test Identity Server, so npm test never
- * runs them: E2E_CHECK=<name> npm run checks. Each check says what it needs. Nothing is recorded.
+ * runs them: E2E_CHECK=<name> npm run checks. checks/global-setup.ts makes that setup with amcli
+ * from checks/setup/<name>.json, and puts the console back afterwards. Nothing is recorded.
  */
 export default defineConfig({
     testDir: './checks',
+    globalSetup: './checks/global-setup.ts',
     workers: 1,
     fullyParallel: false,
     retries: 0,

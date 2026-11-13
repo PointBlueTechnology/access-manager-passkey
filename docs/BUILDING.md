@@ -132,6 +132,21 @@ Each software passkey's private key is kept in `e2e/.state/`, so later runs sign
 
 If NAM's pooled user-store connections time out while idle, the first search after a quiet spell can fail and the stock password page says "Login failed". The test driver retries the password page once and notes it in the report.
 
+### Setup checks
+
+Some settings need the Admin Console set up differently from what `npm test` expects, so they're checked separately, one group at a time:
+
+```bash
+cd e2e
+E2E_CHECK=prepare npm run checks        # keeps one real recovery code for the settings group
+E2E_CHECK=settings npm run checks       # RECOVERY_CODES=false, ACCOUNT_CHECK=verify-rights, the allow-list, ENROLL_GATES=helpdesk
+E2E_CHECK=passwordfetch npm run checks  # Access Manager's PasswordFetch after a passkey-only sign-in
+```
+
+Each group sets the console up for itself with [amcli](https://github.com/PointBlueTechnology/access-manager-cli), from `e2e/checks/setup/<group>.json`, runs the console's Update, and afterwards puts back exactly what it changed. A run that's cut short is put right at the start of the next. Set `AMCLI_URL`, `AMCLI_PASSWORD` and the console's CA in `.env` (see `.env.example`), and the `E2E_SETUP_` names if your class, methods or user store are called something else. To set the console up by hand instead, set `E2E_CHECK_SETUP=manual`.
+
+The accounts the tests use can be created in a test eDirectory with `npm run accounts -- load`, from `e2e/fixtures/test-accounts.ldif` and the IDs and passwords in `.env`.
+
 ## Screenshots
 
 The screenshots in [docs/images](images) are taken from a test Identity Server with the browser tests' accounts and settings:

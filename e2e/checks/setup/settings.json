@@ -1,0 +1,16 @@
+{
+  "classes": [
+    { "name": "${env:E2E_SETUP_CLASS:-Passkey1}", "properties": { "RECOVERY_CODES": "false" } }
+  ],
+  "methods": [
+    { "name": "${env:E2E_SETUP_METHOD_LOGIN:-PasskeyLogin}", "properties": { "ACCOUNT_CHECK": "verify-rights" } },
+    {
+      "name": "${env:E2E_SETUP_METHOD_MANAGE:-passkeyManage}",
+      "properties": {
+        "ALLOWED_AAGUIDS": "ee882879-721c-4913-9775-3dfcce97072a",
+        "ATTESTATION_TRUST_ROOTS": "${file:../../fixtures/yubico-fido-root.pem}"
+      }
+    },
+    { "name": "${env:E2E_SETUP_METHOD_GATED:-passkeyEnroll}", "properties": { "ENROLL_GATES": "helpdesk" } }
+  ]
+}

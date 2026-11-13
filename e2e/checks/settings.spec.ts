@@ -9,17 +9,17 @@ import { Session } from '../lib/nam';
 
 /**
  * Settings that the browser tests leave at their defaults, checked one Admin Console setup at a time.
- * Choose the group with E2E_CHECK:
+ * Choose the group with E2E_CHECK; checks/global-setup.ts sets the console up for it from
+ * checks/setup/<group>.json and puts it back afterwards, since the browser tests expect the defaults.
  *
- * - prepare: with recovery codes on, keeps one real code in e2e/.state (gitignored) for the next group.
- * - passwordfetch: a contract of the LOGIN method then PasswordFetch; see the test.
- * - settings: needs, on the test Identity Server,
+ * - prepare: with recovery codes on (no setup), keeps one real code in e2e/.state (gitignored) for
+ *   the settings group.
+ * - passwordfetch: a contract of the LOGIN method then PasswordFetch.
+ * - settings:
  *     the class:         RECOVERY_CODES=false
  *     the LOGIN method:  ACCOUNT_CHECK=verify-rights
- *     the MANAGE method: ALLOWED_AAGUIDS and ATTESTATION_TRUST_ROOTS (any real vendor root)
+ *     the MANAGE method: ALLOWED_AAGUIDS and ATTESTATION_TRUST_ROOTS (Yubico's FIDO root)
  *     the gated method:  ENROLL_GATES=helpdesk
- *
- * Put the settings back afterwards: the browser tests expect the defaults.
  */
 test.describe.configure({ mode: 'serial' });
 
@@ -90,7 +90,7 @@ test.describe('passwordfetch', () => {
         try {
             expect(await session.driveTo(['login'])).toBe('login');
             expect(await session.click('#pk_button')).toBe('finished');
-            expect(await session.text()).toContain(user.id);
+            // The portal shows the user's full name, if they have one, so the log is what identifies them
             await expectLog(mark, re(`Authenticated user ${user.logPattern}`));
             await expectLog(mark, re(`Password Fetch Class: Principal username is : ${user.logPattern}`));
             await expectLog(mark, /Authentication method \S+ succeeded/);
