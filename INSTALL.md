@@ -162,7 +162,7 @@ ldapmodify -H ldaps://edir.example.com -D cn=admin,o=system -W -f schema/edir-pa
 1. Read [CHANGELOG.md](CHANGELOG.md) for new or changed properties.
 2. Install the new files: AFC **Replace with New File** for each file, or `./install.sh --dry-run` and then `./install.sh --restart` from the new bundle.
 3. Restart the Identity Servers (AFC's **Update All**, or `--restart`). Every node must run the same version, because a sign-in can move between nodes mid-ceremony.
-4. Check `catalina.out` for `[Passkey]` lines. Each method logs `PasskeyAuthClass <version> initialized` with its settings when first used. An invalid configuration logs `PasskeyAuthClass INIT FAILED`, followed by every problem in one warning.
+4. Check the Identity Server's log for `[Passkey]` lines: `/var/opt/novell/nam/logs/idp/nidplogs/NIDP.<date>.xml`, or `catalina.out` if **Echo to Console** is on. Each method logs `PasskeyAuthClass <version> initialized` with its settings when first used. An invalid configuration logs `PasskeyAuthClass INIT FAILED`, followed by every problem in one warning.
 
 Stored passkeys, recovery codes and configuration aren't touched by an upgrade.
 

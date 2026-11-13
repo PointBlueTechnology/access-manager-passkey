@@ -105,6 +105,7 @@ Touch ID, Safari autofill and the automatic upgrade are tested by hand, because 
 2. Copy `e2e/.env.example` to `e2e/.env`. Set `E2E_BASE_URL` and `E2E_SSH` for your test server, fill in the IDs and passwords, and change the contract IDs if yours differ. These are the IDs on each contract's Authentication Card tab (the `main.jsp?id=` value, not the contract's name or URI). Use passwords long enough that they can't match ordinary log text.
 3. `cd e2e && npm install`. The tests use the installed Google Chrome.
 4. Set up key-based ssh from this machine to the Identity Server, which `scripts/deploy-test.sh` needs too.
+5. The tests read `/opt/novell/nam/idp/logs/catalina.out`, so turn on **Echo to Console** in the Identity Server's logging settings, with the Application logger at Info or more detailed, or set `E2E_LOG` to a log file that has the `[Passkey]` lines.
 
 Each optional test is skipped until its settings are in `.env`:
 
@@ -130,6 +131,16 @@ Each software passkey's private key is kept in `e2e/.state/`, so later runs sign
 `.env`, `.state/` and the test output are gitignored. The tests record no traces, screenshots or videos, because pages show codes and the password fields get filled in.
 
 If NAM's pooled user-store connections time out while idle, the first search after a quiet spell can fail and the stock password page says "Login failed". The test driver retries the password page once and notes it in the report.
+
+## Screenshots
+
+The screenshots in [docs/images](images) are taken from a test Identity Server with the browser tests' accounts and settings:
+
+```bash
+cd e2e && npm run screenshots
+```
+
+It uses its own Playwright configuration, so `npm test` never takes screenshots. Pages that ask for a passkey as soon as they load are captured while the request waits, as if the user's device were showing its prompt. Recovery codes are replaced with made-up ones before anything is captured, and each contract's card gets a plain title in place of the test server's contract ID. Nothing else is recorded.
 
 ## Diagrams
 

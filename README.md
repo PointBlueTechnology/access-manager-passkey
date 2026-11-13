@@ -97,7 +97,7 @@ The class runs in one of six modes, set with the `MODE` property on each Method.
 
 Each mode except `LOGIN` acts on the user an earlier method signed in, so it needs Name/Password, or another method that identifies the user, before it in the contract.
 
-Properties set on the Class apply to every method, and a Method's own value overrides the Class's. Set these on the Class, so every method agrees and passkeys saved by one are found by the others: `RP_ID`, `ORIGINS`, `RP_NAME`, `PASSKEY_LDAP_ATTRIBUTE`, `PASSKEY_RECOVERY_ATTRIBUTE`, `PASSKEY_ENROLL_TOKEN_ATTRIBUTE`, `PASSKEY_AUX_CLASS`, `RECOVERY_PEPPER`, `RECOVERY_COOLDOWN_SEC`, `ALLOWED_AAGUIDS`, `ATTESTATION_TRUST_ROOTS`, `NOTIFY_EMAIL`, `NOTIFY_MAIL_ATTRIBUTE` and `SIGNAL_PASSWORD_MANAGERS`. Set `MODE` and the mode's own options on each Method.
+Properties set on the Class apply to every method, and a Method's own value overrides the Class's. Set these on the Class, so every method agrees and passkeys saved by one are found by the others: `RP_ID`, `ORIGINS`, `RP_NAME`, `PASSKEY_LDAP_ATTRIBUTE`, `PASSKEY_RECOVERY_ATTRIBUTE`, `PASSKEY_ENROLL_TOKEN_ATTRIBUTE`, `PASSKEY_AUX_CLASS`, `RECOVERY_PEPPER`, `RECOVERY_CODES`, `RECOVERY_COOLDOWN_SEC`, `ALLOWED_AAGUIDS`, `ATTESTATION_TRUST_ROOTS`, `NOTIFY_EMAIL`, `NOTIFY_MAIL_ATTRIBUTE` and `SIGNAL_PASSWORD_MANAGERS`. Set `MODE` and the mode's own options on each Method.
 
 ## Configuration
 
@@ -131,6 +131,7 @@ Properties set on the Class apply to every method, and a Method's own value over
 | `RECOVERY_PEPPER` | none | Set on the Class. Required for `RECOVERY` and `HELPDESK`, and enables recovery codes elsewhere. Also keeps identifier-first decoys the same on every node, so set it for `LOGIN` too. At least 32 characters; see [Recovery](#recovery) |
 | `PASSKEY_RECOVERY_ATTRIBUTE` / `PASSKEY_ENROLL_TOKEN_ATTRIBUTE` | the passkey attribute | Where hashed codes and tokens are stored |
 | `RECOVERY_CODE_COUNT` | `10` | 1–50 |
+| `RECOVERY_CODES` | `true` | Set on the class. `false` stops offering recovery codes and refuses any already issued, leaving helpdesk tokens as the only way to recover. See [Recovery](#recovery) |
 | `RECOVERY_COOLDOWN_SEC` | `0` | After a recovery, how long new recovery codes are held back (0–2592000). Set on the class; see [Recovery](#recovery) |
 | `MAX_FAILED` | `5` | Wrong codes per login, and wrong entries before a helpdesk token is removed |
 | `HELPDESK_GROUP_DN` | required for `HELPDESK` | Members may issue tokens. Read from `groupMembership`, or `memberOf` on AD |
@@ -155,12 +156,27 @@ A contract of Name/Password followed by a method with `MODE=MFA` asks for a pass
 
 ![Password + passkey sign-in](docs/diagrams/mfa_sign_in.svg)
 
+<img src="docs/images/create-passkey.png" alt="Creating a passkey: an optional name, and a Create a passkey button" width="600">
+
+Creating a passkey. The name is optional; without one, the passkey is named after its provider, when it's known, and the date.
+
 ## Signing in with only a passkey
 
 Create a Method on the class with the property `MODE=LOGIN` and **Identifies User** turned on, and a Contract with that Method on its own. Its page does both styles, which `ALLOW_USERNAMELESS` and `ALLOW_IDENTIFIER_FIRST` turn off individually:
 
 - **Passkey alone:** browsers that support it offer passkeys in the ID field's autofill, and **Sign in with a passkey** opens the browser's dialog.
 - **User ID + passkey:** typing an ID and choosing **Continue** asks for that user's passkeys only.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/passkey-sign-in.png" alt="The passkey-only sign-in page: a User ID field, Continue, Sign in with a passkey, and Use another way to sign in"></td>
+<td width="50%"><img src="docs/images/passkey-sign-in-with-id.png" alt="Signing in as a user, waiting for their passkey"></td>
+</tr>
+<tr>
+<td>The sign-in page. Passkeys can also be picked from the User ID field's autofill</td>
+<td>After <b>Continue</b>, while the browser asks for that user's passkey</td>
+</tr>
+</table>
 
 ![Passkey-only sign-in](docs/diagrams/passkey_only_sign_in.svg)
 
@@ -178,7 +194,7 @@ Since no password is checked, eDirectory never gets the chance to refuse a bind,
 
 An unknown ID, or one with no passkeys, gets a made-up credential ID, so the page doesn't reveal which accounts exist. The decoy is derived from `RECOVERY_PEPPER`, so it's the same on every node and after a restart; without a pepper the class warns at startup. It takes the length and transports of a common kind of passkey, and a real user's answer takes the same directory work as a decoy's. It can't hide everything: a user with more than one passkey lists that many, so the count can still hint that an ID has passkeys. Where that matters, set `ALLOW_IDENTIFIER_FIRST=false`, which leaves signing in with the passkey alone, where no credential IDs are sent.
 
-There's no password in the session after this contract, so anything that replays the user's password, such as Identity Injection or Form Fill of a password, won't have one.
+No password is entered in this contract, so on its own it leaves none in the session for anything that replays the user's password, such as Identity Injection or Form Fill of a password. To give them one, add NAM's PasswordFetch method as the second method in the contract, after the passkey method, as NAM does for X.509 and Kerberos contracts: it retrieves the user's password from eDirectory and stores it with the session's credentials. Select **Retain Previous Principal** on its class, so the user the passkey signed in stays the principal. It works only with eDirectory user stores, and the Universal Password policy must allow the password to be retrieved. See "Password retrieval" in the Access Manager administration guide.
 
 Known issues:
 
@@ -194,7 +210,7 @@ By default a user who has no passkey can create one right after the earlier meth
 |---|---|---|
 | Password only (default) | Nothing extra | A stolen password is enough to enroll |
 | [Automatic upgrade](#automatic-passkey-upgrade) (`MODE=UPGRADE`) | Nothing at all: the browser creates the passkey after a saved password | As password only, and the user may not notice |
-| An existing MFA method first | Put TOTP, email OTP or Advanced Authentication before the passkey method in the contract | Strongest, if users already have that factor |
+| An existing MFA method first | Put an X.509 certificate, TOTP, email OTP or Advanced Authentication before the passkey method in the contract. For certificates, see the [YubiKey cookbook](docs/cookbooks/yubikey-only.md) | Strongest, if users already have that factor |
 | `ENROLL_GATES=email` | A six-digit code is emailed to the user's `NOTIFY_MAIL_ATTRIBUTE` address through NAM's Email configuration. It works once, for 10 minutes; up to 5 can be sent per sign-in | Only as strong as the user's mailbox; needs a working mail setup and an address on each account |
 | `ENROLL_GATES=helpdesk` | A helpdesk agent issues a code from the `HELPDESK` contract, as for recovery. Needs `RECOVERY_PEPPER` on the class | Strong, but every user needs a helpdesk call |
 | `ENROLL_GATES=questions` | The user answers their existing security questions, from SSPR or NMAS: every required one, plus the number of random ones their set asks for (at least one) | Weak: answers are often guessable or public, and NIST SP 800-63B no longer accepts them. Only for sites already relying on SSPR |
@@ -239,6 +255,17 @@ For a worked example, see [YubiKey-only passkeys, moving from certificate sign-i
 
 Create a Method on the class with the property `MODE=MANAGE`, and a Contract of Name/Password followed by that Method. Users reach the page by signing in through that contract; link to it from a portal or bookmark.
 
+<table>
+<tr>
+<td width="50%"><img src="docs/images/passkey-confirm.png" alt="Confirm it is you with a passkey to manage your passkeys"></td>
+<td width="50%"><img src="docs/images/manage.png" alt="The manage page: a list of passkeys with Rename and Remove, recovery codes left, Add a passkey and Done"></td>
+</tr>
+<tr>
+<td>First, the user proves one of their passkeys</td>
+<td>Then they can rename, remove and add passkeys, and replace their recovery codes</td>
+</tr>
+</table>
+
 A user who has passkeys must prove one, with user verification, before the page shows anything, and again after `MANAGE_MAX_AUTH_AGE_SEC`. A passkey used in another contract doesn't count, even moments earlier in the same browser. A rename, remove, add or Done stopped by that finishes once they confirm. A password alone never adds or removes a passkey on an account that has one. A user with no passkeys can enroll from the page if `ENROLL_IF_NONE` is on, after any [first-passkey checks](#the-first-passkey). Finishing the method doesn't require a passkey for that user, so don't give this contract a higher authentication level than its earlier methods. Removing the last passkey returns the account to that no-passkey state; set `REQUIRE_ONE=true` to prevent it.
 
 ## Keeping password managers in sync
@@ -264,7 +291,20 @@ If a user loses every passkey, a contract of Name/Password followed by a Method 
 
 ![Account recovery](docs/diagrams/account_recovery.svg)
 
+<table>
+<tr>
+<td width="50%"><img src="docs/images/recovery.png" alt="The recovery page: enter a recovery code or the code from the helpdesk"></td>
+<td width="50%"><img src="docs/images/recovery-codes.png" alt="A list of ten recovery codes, with Copy codes and I've saved them buttons"></td>
+</tr>
+<tr>
+<td>Recovering with a code, after the password</td>
+<td>New recovery codes, shown once (these are made up)</td>
+</tr>
+</table>
+
 Users get recovery codes with their first passkey, if `RECOVERY_PEPPER` is set, and can replace them from the manage page. Codes are shown once.
+
+To rely on the helpdesk alone, set `RECOVERY_CODES=false` on the class. Users are then never shown codes, the manage page doesn't mention them, and the recovery page asks only for the code from the helpdesk. Codes issued before are refused too. The pepper is still needed, for helpdesk tokens and the rest.
 
 After a recovery, the manage page asks the user to check their passkeys and marks the ones added during recovery. Recovery codes or a helpdesk token could reach the wrong person, so `RECOVERY_COOLDOWN_SEC` (for example `86400`) holds back new recovery codes for that long after each recovery. Someone who recovered the account first can't then lock its owner out with codes of their own, and the owner has time to see the email and use their own code or the helpdesk. Removing passkeys stays allowed, so a genuine user can clear out the ones they lost. The recovery time is stored with the codes, as `rr1:` and the time in milliseconds, so deleting the passkey made during recovery doesn't end the cool-down.
 
@@ -283,6 +323,10 @@ Anyone who can read NAM's configuration can read this value, so keep the configu
 A helpdesk agent can issue a single-use token that lets a user recover their account, or pass the `helpdesk` first-passkey check. Create a Method with `MODE=HELPDESK` and `HELPDESK_GROUP_DN`, and a Contract with Name/Password before it.
 
 ![Helpdesk token](docs/diagrams/helpdesk_token.svg)
+
+<img src="docs/images/helpdesk.png" alt="Issue a helpdesk code: the caller's user ID and three checks the agent must confirm" width="600">
+
+The agent enters the caller's user ID and confirms each check before a code is issued.
 
 An agent must be in the group, checked on every request, or be named in `HELPDESK_ALLOWED_DNS`, and must prove their own passkey. They must confirm every identity check on the page before a token is issued, and they can't issue one for themselves. A token lasts `ENROLL_TOKEN_TTL_SEC` and is shown once. Every issue is logged with the agent's and user's names, and the user is emailed if `NOTIFY_EMAIL` is on.
 
@@ -303,7 +347,7 @@ A sign-in or change never waits for mail. It only adds the message to a queue in
 
 ## Logging
 
-Everything, including the bundled Yubico library's SLF4J output, goes to the Identity Server **Application** logger (`NIDPLog`). Set its level in Administration Console under Identity Servers > Edit > Logging > Component File Logger Levels > Application. Look for lines starting with `[Passkey]` (this class) or `[Passkey:<Class>]` (the library) in the IDP `catalina.out`. Nothing is written to stdout or stderr.
+Everything, including the bundled Yubico library's SLF4J output, goes to the Identity Server **Application** logger (`NIDPLog`). Set its level in Administration Console under Identity Servers > Edit > Logging > Component File Logger Levels > Application. Look for lines starting with `[Passkey]` (this class) or `[Passkey:<Class>]` (the library). They're wherever NAM writes its own log: the Identity Server's log file, `/var/opt/novell/nam/logs/idp/nidplogs/NIDP.<date>.xml` by default, and also `catalina.out` when **Echo to Console** is on in the same logging settings. The class never prints to stdout or stderr itself.
 
 Lines name the user and what happened, never a secret: no challenges, signatures, recovery codes, helpdesk tokens, setup codes, security answers or the pepper, and no email addresses. Some lines include text the browser sent, such as a request parameter or the origin in a passkey response, so every message is cleaned first: line breaks and other control characters show as escapes like `\n`, `<` and `>` become `‹` and `›`, and messages over 4,000 characters are cut. A crafted request can't add a fake line to the log.
 

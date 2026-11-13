@@ -5,11 +5,12 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "screenshots": "playwright test --config screenshots.config.ts"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.1",
-    "@types/node": "24.19.2",
-    "typescript": "6.0.3"
+    "@playwright/test": "1.65.0",
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2"
   }
 }
