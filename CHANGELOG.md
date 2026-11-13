@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## 0.1.0-beta.6
+
+Upgrading from 0.1.0-beta.5: nothing in the jar or the pages changed except the version number, so there's no need to upgrade. This release records more of the class as tested, and documents what the tests showed.
+
+- Now tested end to end on Access Manager 5.1.3 with eDirectory: `RECOVERY_CODES=false`, `ACCOUNT_CHECK=verify-rights`, the authenticator allow-list refusing an unattested authenticator, the helpdesk first-passkey check (`ENROLL_GATES=helpdesk`), and Access Manager's PasswordFetch after a passkey-only sign-in. Tested by hand: the automatic upgrade and password manager sync with Chrome and Google Password Manager. The README's Status table is updated to match
+- README: Chrome's conditions for the automatic upgrade. The profile must save passwords and passkeys to a Google account, passkeys must already be set up on that computer, and the user must pick the saved password from Chrome's list; with Access Manager's own password page, a password Chrome filled in by itself as the page loaded doesn't count. `chrome://histograms` shows why Chrome skipped one
+- Browser tests: setup checks (`E2E_CHECK=prepare`, `settings` or `passwordfetch` with `npm run checks`) that set up the Admin Console for themselves with [amcli](https://github.com/PointBlueTechnology/access-manager-cli) and put it back afterwards, and `npm run accounts` to load the test accounts and helpdesk group into a test eDirectory. See [docs/BUILDING.md](docs/BUILDING.md#setup-checks)
+
 ## 0.1.0-beta.5
 
 Upgrading from 0.1.0-beta.4: replace the jar as in [INSTALL.md](INSTALL.md). No page changed and nothing needs configuring. Only the libraries bundled in the jar changed.
