@@ -9,6 +9,11 @@ updates:
     ignore:
       # Access Manager's own jars, installed from a real Identity Server; not in any public repository
       - dependency-name: "com.novell.nam:*"
+    groups:
+      # bcprov and bcpkix only work at the same version, so they're updated in one pull request
+      bouncycastle:
+        patterns:
+          - "org.bouncycastle:*"
   - package-ecosystem: npm
     directory: /e2e
     schedule:
