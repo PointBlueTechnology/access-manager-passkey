@@ -2,10 +2,13 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 0.1.0-beta.4
+
+Upgrading from 0.1.0-beta.3: replace the jar and every JSP as in [INSTALL.md](INSTALL.md); only `passkey_recovery.jsp` changed, and there are no new pages. Nothing needs configuring: recovery codes stay on unless you set `RECOVERY_CODES=false`.
 
 - `RECOVERY_CODES=false` turns recovery codes off: none are offered after the first passkey or on the manage page, any issued before are refused, and the recovery page asks only for a helpdesk code. Helpdesk tokens keep working.
 - Docs: screenshots of the sign-in, manage, recovery and helpdesk pages, taken by `npm run screenshots` in `e2e/`
+- Docs: the class's log lines go wherever NAM logs, its log file and `catalina.out` only with Echo to Console; NAM's PasswordFetch method after a passkey-only sign-in supplies a password for Identity Injection and Form Fill; an X.509 certificate is listed as an earlier method that protects the first passkey
 
 ## 0.1.0-beta.3
 
