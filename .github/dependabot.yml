@@ -9,6 +9,9 @@ updates:
     ignore:
       # Access Manager's own jars, installed from a real Identity Server; not in any public repository
       - dependency-name: "com.novell.nam:*"
+      # The logging binding is an SLF4J 1.7 one, which SLF4J 2 ignores; moving needs an SLF4J 2 provider first
+      - dependency-name: "org.slf4j:*"
+        update-types: ["version-update:semver-major"]
     groups:
       # bcprov and bcpkix only work at the same version, so they're updated in one pull request
       bouncycastle:
