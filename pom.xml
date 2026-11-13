@@ -36,7 +36,7 @@
         <cbor.version>4.5.6</cbor.version>
         <httpclient5.version>5.6.5</httpclient5.version>
         <!-- 1.7.x so our StaticLoggerBinder (src/main/java/org/slf4j/impl) is the binding -->
-        <slf4j.version>1.7.36</slf4j.version>
+        <slf4j.version>2.0.20</slf4j.version>
 
         <junit.version>5.11.4</junit.version>
         <shaded.prefix>com.pointbluetech.shaded</shaded.prefix>
