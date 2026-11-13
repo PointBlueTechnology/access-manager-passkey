@@ -9,3 +9,6 @@ e2e/.env
 e2e/.state/
 e2e/test-results/
 e2e/playwright-report/
+# amcli-deploy.sh settings and the restore files it writes
+amcli.env
+*.restore-*.json

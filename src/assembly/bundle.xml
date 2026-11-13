@@ -28,6 +28,12 @@
             <lineEnding>unix</lineEnding>
         </file>
         <file>
+            <source>scripts/amcli-deploy.sh</source>
+            <outputDirectory>.</outputDirectory>
+            <fileMode>0755</fileMode>
+            <lineEnding>unix</lineEnding>
+        </file>
+        <file>
             <source>INSTALL.md</source>
             <outputDirectory>.</outputDirectory>
             <fileMode>0644</fileMode>
@@ -57,6 +63,15 @@
             <includes>
                 <include>passkey_*.jsp</include>
                 <include>passkey_*.jspf</include>
+            </includes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>amcli</directory>
+            <outputDirectory>amcli</outputDirectory>
+            <includes>
+                <include>*.json</include>
+                <include>amcli.env.example</include>
             </includes>
             <fileMode>0644</fileMode>
         </fileSet>

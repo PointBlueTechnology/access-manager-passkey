@@ -1,0 +1,20 @@
+{
+  "methods": [
+    {
+      "name": "Passkey Helpdesk",
+      "class": "Passkey",
+      "userStores": ["${env:PASSKEY_USER_STORE}"],
+      "identifiesUser": false,
+      "properties": { "MODE": "HELPDESK", "HELPDESK_GROUP_DN": "${env:PASSKEY_HELPDESK_GROUP_DN}" }
+    }
+  ],
+  "contracts": [
+    {
+      "name": "Passkey Helpdesk",
+      "uri": "/passkey/helpdesk",
+      "methods": ["${env:PASSKEY_PASSWORD_METHOD:-Secure Name/Password - Form}", "Passkey Helpdesk"],
+      "cardId": "PasskeyHelpdesk",
+      "cardText": "Passkey helpdesk"
+    }
+  ]
+}

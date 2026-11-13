@@ -1,0 +1,73 @@
+{
+  "classes": [
+    {
+      "name": "Passkey",
+      "javaClass": "com.pointbluetech.nam.login.passkey.PasskeyAuthClass",
+      "properties": {
+        "RP_ID": "${env:PASSKEY_RP_ID}",
+        "ORIGINS": "${env:PASSKEY_ORIGINS}",
+        "RECOVERY_PEPPER": "${env:PASSKEY_RECOVERY_PEPPER}"
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "Passkey MFA",
+      "class": "Passkey",
+      "userStores": ["${env:PASSKEY_USER_STORE}"],
+      "identifiesUser": false,
+      "properties": { "MODE": "MFA" }
+    },
+    {
+      "name": "Passkey Login",
+      "class": "Passkey",
+      "userStores": ["${env:PASSKEY_USER_STORE}"],
+      "identifiesUser": true,
+      "properties": { "MODE": "LOGIN" }
+    },
+    {
+      "name": "Passkey Manage",
+      "class": "Passkey",
+      "userStores": ["${env:PASSKEY_USER_STORE}"],
+      "identifiesUser": false,
+      "properties": { "MODE": "MANAGE" }
+    },
+    {
+      "name": "Passkey Recovery",
+      "class": "Passkey",
+      "userStores": ["${env:PASSKEY_USER_STORE}"],
+      "identifiesUser": false,
+      "properties": { "MODE": "RECOVERY" }
+    }
+  ],
+  "contracts": [
+    {
+      "name": "Passkey MFA",
+      "uri": "/passkey/mfa",
+      "methods": ["${env:PASSKEY_PASSWORD_METHOD:-Secure Name/Password - Form}", "Passkey MFA"],
+      "cardId": "PasskeyMFA",
+      "cardText": "Password and passkey"
+    },
+    {
+      "name": "Passkey Login",
+      "uri": "/passkey/login",
+      "methods": ["Passkey Login"],
+      "cardId": "PasskeyLogin",
+      "cardText": "Sign in with a passkey"
+    },
+    {
+      "name": "Passkey Manage",
+      "uri": "/passkey/manage",
+      "methods": ["${env:PASSKEY_PASSWORD_METHOD:-Secure Name/Password - Form}", "Passkey Manage"],
+      "cardId": "PasskeyManage",
+      "cardText": "Manage your passkeys"
+    },
+    {
+      "name": "Passkey Recovery",
+      "uri": "/passkey/recovery",
+      "methods": ["${env:PASSKEY_PASSWORD_METHOD:-Secure Name/Password - Form}", "Passkey Recovery"],
+      "cardId": "PasskeyRecovery",
+      "cardText": "Recover passkey access"
+    }
+  ]
+}

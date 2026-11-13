@@ -2,6 +2,10 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+- `amcli-deploy.sh` in the bundle installs and configures the class through Administration Console with [amcli](https://github.com/PointBlueTechnology/access-manager-cli): the jar and JSPs through Advanced File Configurator with the restart, then the class, methods and contracts from `amcli/passkey.json` (and `amcli/passkey-helpdesk.json`). See INSTALL.md, "Scripted: amcli"
+
 ## 0.1.0-beta.6
 
 Upgrading from 0.1.0-beta.5: nothing in the jar or the pages changed except the version number, so there's no need to upgrade. This release records more of the class as tested, and documents what the tests showed.

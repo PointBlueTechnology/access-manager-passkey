@@ -23,6 +23,10 @@ Nothing else goes on the nodes. Every setting, including `RECOVERY_PEPPER`, is a
 ```
 nam-passkey-auth-<version>/
   install.sh                 single-node installer (below)
+  amcli-deploy.sh            scripted install and setup through Administration Console, with amcli (below)
+  amcli/passkey.json         the class, methods and contracts amcli-deploy.sh creates
+  amcli/passkey-helpdesk.json  the optional helpdesk method and contract
+  amcli/amcli.env.example    the settings amcli-deploy.sh needs
   INSTALL.md                 this file
   VERSION
   LICENSE                    MIT
@@ -36,7 +40,7 @@ nam-passkey-auth-<version>/
 
 | Deployment | Use |
 |---|---|
-| A cluster of Identity Servers | [Advanced File Configurator](#cluster-advanced-file-configurator) |
+| A cluster of Identity Servers | [Advanced File Configurator](#cluster-advanced-file-configurator), by hand or [scripted with amcli](#scripted-amcli) |
 | Docker / Kubernetes | [Advanced File Configurator](#docker-and-kubernetes), or a derived image |
 | One Identity Server, a lab, or a node not managed through AFC | [`install.sh`](#single-node-installsh) |
 
@@ -114,6 +118,33 @@ To copy the setup to another cluster or environment, such as test to production,
 
 **After a NAM upgrade.** Follow the guide's post-upgrade steps (§1.1.5.2.9): for each AFC file, compare it with a node's copy in **File Editor**, click **Send Configurations to Servers** on all of them even if they show as sent, and **Update All**. Rebuild and upgrade the passkey class too if [CHANGELOG.md](CHANGELOG.md) or the [release notes](https://github.com/PointBlueTechnology/access-manager-passkey/releases) say the new NAM version needs it.
 
+## Scripted: amcli
+
+[amcli](https://github.com/PointBlueTechnology/access-manager-cli/releases/latest) is a command-line client for the Administration Console's API, from the same authors. With it, `amcli-deploy.sh` in the bundle does the [Advanced File Configurator](#cluster-advanced-file-configurator) steps above and creates the class, methods and contracts, so an install, an upgrade or a new environment is one command. It works through Administration Console, like the steps by hand, so AFC still puts the files on every node, including new ones.
+
+1. Install amcli 0.3.1 or later (it needs Node.js 20.12 or later):
+   ```bash
+   npm install -g https://github.com/PointBlueTechnology/access-manager-cli/releases/download/v0.3.1/access-manager-cli-0.3.1.tgz
+   ```
+2. In the unpacked bundle, copy `amcli/amcli.env.example` to `amcli.env` and fill it in: the Administration Console and an administrator, then `RP_ID`, `ORIGINS`, the recovery pepper and the user store for the passkey class. Keep the file private; it holds a password and the pepper.
+3. Look before changing anything:
+   ```bash
+   AMCLI_ENV_FILE=amcli.env ./amcli-deploy.sh all --dry-run
+   ```
+4. Then run it. `all` does both steps below; each can also run on its own:
+   ```bash
+   AMCLI_ENV_FILE=amcli.env ./amcli-deploy.sh all
+   ```
+
+| Step | What it does |
+|---|---|
+| `files` | Uploads the jar (marked as needing a restart) and each JSP to AFC one file at a time, sends them to the servers, and runs the Update that restarts them onto the new jar. Use it for upgrades too: it replaces the files AFC already has |
+| `config` | Creates the class **Passkey**, the methods **Passkey MFA**, **Passkey Login**, **Passkey Manage** and **Passkey Recovery**, and a contract for each, from `amcli/passkey.json`, then runs an Update. Running it again changes only what differs. `--helpdesk` also adds the helpdesk method and contract, which need `PASSKEY_HELPDESK_GROUP_DN`. `--config FILE` uses your own file instead |
+
+`amcli/passkey.json` is a starting point: edit the names, URIs, card IDs and properties to suit, or add the other modes from the [README](README.md#contracts). The MFA, Manage and Recovery contracts use the **Secure Name/Password - Form** method for the password; set `PASSKEY_PASSWORD_METHOD` to use another. `config` writes a `passkey.restore-<date>.json` file that undoes what it changed: apply it with `amcli apply -f <file> --yes`, then `amcli update --yes --wait`. It can hold the recovery pepper, so keep it private or delete it.
+
+The Update in `files` restarts every Identity Server in the cluster, as **Update All** does, so run it when that suits you.
+
 ## Docker and Kubernetes
 
 Use AFC, with the same steps as for a cluster. It's the supported way, and the only one that survives a pod restart without changing the image:
@@ -145,7 +176,7 @@ The chart builds the image name as `<global.image.repository>/am-idp:<chart appV
 
 ## Configure the class
 
-Once the files are on every node, set up the class in Administration Console: **Identity Servers > Edit > Local > Classes > New**, **Other**, Java class `com.pointbluetech.nam.login.passkey.PasskeyAuthClass`, then its properties, Methods and Contracts. The [README](README.md#configuration) lists every property. Configuration is stored by NAM, so it doesn't need reinstalling with the files.
+Once the files are on every node, set up the class in Administration Console, or with `amcli-deploy.sh config` (see [Scripted: amcli](#scripted-amcli)): **Identity Servers > Edit > Local > Classes > New**, **Other**, Java class `com.pointbluetech.nam.login.passkey.PasskeyAuthClass`, then its properties, Methods and Contracts. The [README](README.md#configuration) lists every property. Configuration is stored by NAM, so it doesn't need reinstalling with the files.
 
 ## Schema (optional)
 
