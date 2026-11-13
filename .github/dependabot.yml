@@ -12,6 +12,9 @@ updates:
       # The logging binding is an SLF4J 1.7 one, which SLF4J 2 ignores; moving needs an SLF4J 2 provider first
       - dependency-name: "org.slf4j:*"
         update-types: ["version-update:semver-major"]
+      # JUnit 6 needs Java 17, and the unit tests also run on Java 11, the runtime Access Manager 5.1.3 ships
+      - dependency-name: "org.junit:*"
+        update-types: ["version-update:semver-major"]
     groups:
       # bcprov and bcpkix only work at the same version, so they're updated in one pull request
       bouncycastle:
