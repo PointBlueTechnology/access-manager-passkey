@@ -80,6 +80,8 @@ Then, in Administration Console:
 2. Set at least `RP_ID` and `ORIGINS` on the class.
 3. Create a Method for each `MODE` you need, and a Contract for each, as in [Contracts](#contracts).
 
+To script these steps, [amcli](https://github.com/PointBlueTechnology/access-manager-cli/releases/latest), a command-line client for the Administration Console's API from PointBlue Technology, can upload each file through Advanced File Configurator and send it to the servers, create the class, methods and contracts from a JSON file, and run Update. The browser tests use it to set up their checks. It's a separate project; its [Status](https://github.com/PointBlueTechnology/access-manager-cli#status) says what's been tested.
+
 To build from source, see [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Contracts
