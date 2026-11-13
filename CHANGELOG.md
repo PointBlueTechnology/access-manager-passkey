@@ -2,6 +2,14 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
+## 0.1.0-beta.5
+
+Upgrading from 0.1.0-beta.4: replace the jar as in [INSTALL.md](INSTALL.md). No page changed and nothing needs configuring. Only the libraries bundled in the jar changed.
+
+- Bundled libraries: Jackson 2.23.0 (was 2.22.4) and Guava 33.8.0 (was 33.7.2), updated in THIRD-PARTY-NOTICES.txt
+- Build and test tools: the Maven compiler, jar, shade, assembly and surefire plugins; JUnit 5.14.4; Bouncy Castle 1.86 for compiling and testing (on the Identity Server the class still uses Access Manager's own copy); the browser tests' Playwright 1.65 and TypeScript 7; the CI workflow's actions
+- Dependabot updates Bouncy Castle's libraries together, and skips major SLF4J and JUnit versions: the class's logging binding is an SLF4J 1.7 one, and JUnit 6 doesn't run on Java 11, which the tests also use
+
 ## 0.1.0-beta.4
 
 Upgrading from 0.1.0-beta.3: replace the jar and every JSP as in [INSTALL.md](INSTALL.md); only `passkey_recovery.jsp` changed, and there are no new pages. Nothing needs configuring: recovery codes stay on unless you set `RECOVERY_CODES=false`.

@@ -6,10 +6,10 @@ Yubico java-webauthn-server (webauthn-server-core, yubico-util) 2.10.1
   Portions BSD 3-Clause, Copyright (c) 2014, Google Inc.
   https://github.com/Yubico/java-webauthn-server
 
-Jackson (core, annotations, databind, dataformat-cbor, datatype-jdk8, datatype-jsr310) 2.22.x
+Jackson (core, annotations, databind, dataformat-cbor, datatype-jdk8, datatype-jsr310) 2.23.x
   Apache License 2.0 - https://github.com/FasterXML/jackson
 
-Guava 33.7.2-jre, failureaccess, error_prone_annotations, j2objc-annotations
+Guava 33.8.0-jre, failureaccess, error_prone_annotations, j2objc-annotations
   Apache License 2.0 - https://github.com/google/guava
 
 JSpecify 1.0.1
