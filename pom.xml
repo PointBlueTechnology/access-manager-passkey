@@ -128,7 +128,7 @@
             <!-- ldapchai logs through log4j 1 -->
             <groupId>ch.qos.reload4j</groupId>
             <artifactId>reload4j</artifactId>
-            <version>1.2.26</version>
+            <version>1.2.27</version>
             <scope>test</scope>
         </dependency>
         <!-- Tests only: makes attestation certificates for the software authenticator -->
