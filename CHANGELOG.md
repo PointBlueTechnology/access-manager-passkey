@@ -2,9 +2,13 @@
 
 All notable changes to this project are listed here. Versions follow [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 0.1.0-beta.7
 
-- `amcli-deploy.sh` in the bundle installs and configures the class through Administration Console with [amcli](https://github.com/PointBlueTechnology/access-manager-cli): the jar and JSPs through Advanced File Configurator with the restart, then the class, methods and contracts from `amcli/passkey.json` (and `amcli/passkey-helpdesk.json`). See INSTALL.md, "Scripted: amcli"
+Upgrading from 0.1.0-beta.6: the jar and the pages are unchanged apart from the version number, so there's no need to upgrade. The bundle adds a scripted install.
+
+- `amcli-deploy.sh` in the bundle installs and configures the class through Administration Console with [amcli](https://github.com/PointBlueTechnology/access-manager-cli) 0.3.1 or later. `files` uploads the jar and the JSPs through Advanced File Configurator, one file at a time, and runs the Update that restarts the Identity Servers onto the jar. `config` creates the class, the MFA, Login, Manage and Recovery methods and a contract for each from `amcli/passkey.json`, which you can edit (`--helpdesk` adds `amcli/passkey-helpdesk.json`), and writes a file that undoes it. `all` does both, and `--dry-run` shows the plan first. See INSTALL.md, "Scripted: amcli"
+- README: the Installing section points to the script, and to amcli
+- Browser tests: amcli 0.3.1
 
 ## 0.1.0-beta.6
 
