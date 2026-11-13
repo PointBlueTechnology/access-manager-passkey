@@ -6,7 +6,9 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "check": "tsc --noEmit",
-    "screenshots": "playwright test --config screenshots.config.ts"
+    "screenshots": "playwright test --config screenshots.config.ts",
+    "checks": "playwright test --config checks.config.ts",
+    "accounts": "node scripts/accounts.mts"
   },
   "devDependencies": {
     "@playwright/test": "1.65.0",

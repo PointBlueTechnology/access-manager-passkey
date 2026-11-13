@@ -1,0 +1,70 @@
+# The browser tests' accounts and helpdesk group, for a test eDirectory. Load it with
+# `npm run accounts -- load` (e2e/scripts/accounts.mts), which fills in the @...@ values from e2e/.env
+# and sets each account's password from there; nothing secret is kept in this file.
+#
+# @USERS@ and @GROUPS@ are the containers (E2E_LDAP_USERS, E2E_LDAP_GROUPS). The IDs and mail values
+# are E2E_AGENT_ID, E2E_USER_ID, E2E_DISABLED_ID, E2E_ENROLL_ID, E2E_USER_MAIL and E2E_ENROLL_MAIL.
+# The helpdesk method's HELPDESK_GROUP_DN is cn=pktest-helpdesk,@GROUPS@.
+
+# The helpdesk agent: in the helpdesk group
+dn: cn=@AGENT_ID@,@USERS@
+changetype: add
+objectClass: inetOrgPerson
+cn: @AGENT_ID@
+sn: Agent
+givenName: Passkey Test
+fullName: Passkey Test Agent
+description: Passkey browser tests: helpdesk agent
+
+# The ordinary user: not in the helpdesk group, gets notification emails
+dn: cn=@USER_ID@,@USERS@
+changetype: add
+objectClass: inetOrgPerson
+cn: @USER_ID@
+sn: User
+givenName: Passkey Test
+fullName: Passkey Test User
+mail: @USER_MAIL@
+description: Passkey browser tests: user
+
+# Disabled after it has a software passkey (`npm run accounts -- disable`); created enabled so the
+# tests can give it one first
+dn: cn=@DISABLED_ID@,@USERS@
+changetype: add
+objectClass: inetOrgPerson
+cn: @DISABLED_ID@
+sn: Disabled
+givenName: Passkey Test
+fullName: Passkey Test Disabled
+loginDisabled: FALSE
+description: Passkey browser tests: disabled account
+
+# The first-passkey checks: never keeps a passkey; its SSPR answers come from sspr-responses.ldif
+dn: cn=@ENROLL_ID@,@USERS@
+changetype: add
+objectClass: inetOrgPerson
+cn: @ENROLL_ID@
+sn: Enroll
+givenName: Passkey Test
+fullName: Passkey Test Enroll
+mail: @ENROLL_MAIL@
+description: Passkey browser tests: first passkey
+
+dn: cn=pktest-helpdesk,@GROUPS@
+changetype: add
+objectClass: groupOfNames
+cn: pktest-helpdesk
+description: Passkey browser tests: helpdesk agents (HELPDESK_GROUP_DN)
+member: cn=@AGENT_ID@,@USERS@
+
+# eDirectory reads group membership from the user's side; separate records, because some servers
+# add these themselves when the group's member is written
+dn: cn=@AGENT_ID@,@USERS@
+changetype: modify
+add: groupMembership
+groupMembership: cn=pktest-helpdesk,@GROUPS@
+
+dn: cn=@AGENT_ID@,@USERS@
+changetype: modify
+add: securityEquals
+securityEquals: cn=pktest-helpdesk,@GROUPS@

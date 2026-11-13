@@ -26,9 +26,9 @@ export function logMark(): number {
     return size;
 }
 
-/** The passkey class's lines and NAM's sign-in lines since the mark. */
+/** The passkey class's lines and NAM's sign-in and method-result lines since the mark. */
 export function passkeyLines(mark: number): string[] {
-    return remote(`tail -c +${mark + 1} ${quote(env.log)} | grep -E '\\[Passkey|Authenticated user' || true`)
+    return remote(`tail -c +${mark + 1} ${quote(env.log)} | grep -E '\\[Passkey|Authenticated user|Authentication method .* (succeeded|failed)|Password Fetch Class' || true`)
         .split('\n')
         .filter(Boolean);
 }

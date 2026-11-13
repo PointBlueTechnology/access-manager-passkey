@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["playwright.config.ts", "screenshots.config.ts", "lib/**/*.ts", "tests/**/*.ts", "screenshots/**/*.ts"]
+  "include": ["playwright.config.ts", "screenshots.config.ts", "checks.config.ts", "lib/**/*.ts", "tests/**/*.ts", "screenshots/**/*.ts", "checks/**/*.ts", "scripts/**/*.mts"]
 }
