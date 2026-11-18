@@ -122,19 +122,24 @@ To copy the setup to another cluster or environment, such as test to production,
 
 [amcli](https://github.com/PointBlueTechnology/access-manager-cli/releases/latest) is a command-line client for the Administration Console's API, from the same authors. With it, `amcli-deploy.sh` in the bundle does the [Advanced File Configurator](#cluster-advanced-file-configurator) steps above and creates the class, methods and contracts, so an install, an upgrade or a new environment is one command. It works through Administration Console, like the steps by hand, so AFC still puts the files on every node, including new ones.
 
-1. Install amcli 0.3.1 or later (it needs Node.js 20.12 or later):
+1. Install amcli 0.3.1 or later (it needs Node.js 20.12 or later). The current release is 0.7.1:
    ```bash
-   npm install -g https://github.com/PointBlueTechnology/access-manager-cli/releases/download/v0.3.1/access-manager-cli-0.3.1.tgz
+   npm install -g https://github.com/PointBlueTechnology/access-manager-cli/releases/download/v0.7.1/access-manager-cli-0.7.1.tgz
    ```
 2. In the unpacked bundle, copy `amcli/amcli.env.example` to `amcli.env` and fill it in: the Administration Console and an administrator, then `RP_ID`, `ORIGINS`, the recovery pepper and the user store for the passkey class. Keep the file private; it holds a password and the pepper.
 3. Look before changing anything:
    ```bash
    AMCLI_ENV_FILE=amcli.env ./amcli-deploy.sh all --dry-run
    ```
-4. Then run it. `all` does both steps below; each can also run on its own:
+4. Optionally, with amcli 0.6 or later, keep a copy of the console's configuration to compare with afterwards:
+   ```bash
+   amcli --settings amcli.env backup ~/amcli-backups
+   ```
+5. Then run it. `all` does both steps below; each can also run on its own:
    ```bash
    AMCLI_ENV_FILE=amcli.env ./amcli-deploy.sh all
    ```
+   Running `amcli --settings amcli.env backup ~/amcli-backups` again saves a second copy and lists what the deploy changed.
 
 | Step | What it does |
 |---|---|
@@ -144,6 +149,8 @@ To copy the setup to another cluster or environment, such as test to production,
 `amcli/passkey.json` is a starting point: edit the names, URIs, card IDs and properties to suit, or add the other modes from the [README](README.md#contracts). The MFA, Manage and Recovery contracts use the **Secure Name/Password - Form** method for the password; set `PASSKEY_PASSWORD_METHOD` to use another. `config` writes a `passkey.restore-<date>.json` file that undoes what it changed: apply it with `amcli apply -f <file> --yes`, then `amcli update --yes --wait`. It can hold the recovery pepper, so keep it private or delete it.
 
 The Update in `files` restarts every Identity Server in the cluster, as **Update All** does, so run it when that suits you.
+
+amcli does more than deploy: scheduled backups that alert on changes and expiring certificates (`amcli backup`), a report of which SAML providers and protected resources use which contracts and methods (`amcli report`), and an MCP server so AI agents can read or manage the console (`amcli mcp --read-only`). See its [README](https://github.com/PointBlueTechnology/access-manager-cli#readme).
 
 ## Docker and Kubernetes
 
