@@ -11,7 +11,7 @@
     "accounts": "node scripts/accounts.mts"
   },
   "devDependencies": {
-    "@playwright/test": "1.65.0",
+    "@playwright/test": "1.65.1",
     "@types/node": "26.6.6",
     "access-manager-cli": "github:PointBlueTechnology/access-manager-cli#v0.7.1",
     "typescript": "7.0.2"
